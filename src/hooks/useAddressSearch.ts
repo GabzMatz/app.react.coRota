@@ -13,7 +13,8 @@ export const useAddressSearch = (query: string, delay: number = 1000) => {
   const [error, setError] = useState<string | null>(null);
 
   const searchAddress = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
+    const term = searchQuery.trim();
+    if (!term || term.length < 3) {
       setResults([]);
       return;
     }
@@ -22,19 +23,43 @@ export const useAddressSearch = (query: string, delay: number = 1000) => {
     setError(null);
 
     try {
-      // Usando Nominatim (OpenStreetMap) para busca de endereços
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`
-      );
-      
+      // Usando Photon (CORS-friendly) para evitar bloqueios
+      // Photon não suporta 'pt' no parâmetro lang; usar sem lang para evitar 400
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&limit=5`;
+      const response = await fetch(url);
+
       if (!response.ok) {
         throw new Error('Erro na busca de endereços');
       }
 
       const data = await response.json();
-      setResults(data);
+      const mapped: AddressResult[] = Array.isArray(data?.features)
+        ? data.features.map((f: any) => {
+            const props = f?.properties || {};
+            const nameParts = [
+              props.name,
+              props.housenumber,
+              props.street,
+              props.suburb,
+              props.city || props.town || props.village,
+              props.state,
+              props.country
+            ].filter(Boolean);
+            const display_name = nameParts.join(', ');
+            const [lon, lat] = Array.isArray(f?.geometry?.coordinates) ? f.geometry.coordinates : [undefined, undefined];
+            return {
+              display_name: display_name || props.label || props.name || 'Endereço',
+              lat: String(lat ?? ''),
+              lon: String(lon ?? ''),
+              place_id: Number(props.osm_id || props.extent?.join('') || Date.now())
+            } as AddressResult;
+          })
+        : [];
+
+      setResults(mapped);
     } catch (err) {
-      setError('Erro ao buscar endereços');
+      const message = err instanceof Error ? err.message : 'Erro ao buscar endereços';
+      setError(message);
       console.error('Erro na busca:', err);
     } finally {
       setLoading(false);

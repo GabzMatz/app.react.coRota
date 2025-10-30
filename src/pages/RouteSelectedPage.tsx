@@ -177,6 +177,14 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
           distance: formatDistance(distance),
           description: 'Rota mais rápida'
         });
+
+        // Persistir duração em minutos para ser usada no cálculo do endTime
+        try {
+          const rounded = Math.round(duration);
+          localStorage.setItem('routeDurationMinutes', String(rounded));
+        } catch (_) {
+          // noop
+        }
       }
     });
 

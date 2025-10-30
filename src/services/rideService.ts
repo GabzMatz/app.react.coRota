@@ -3,7 +3,8 @@ export interface CreateRideRequest {
   departureLatLng: [number, number];
   destinationLatLng: [number, number];
   date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   allSeats: number;
   pricePerPassenger: number;
   passengerIds: string[];

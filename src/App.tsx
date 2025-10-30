@@ -19,6 +19,7 @@ import { RegisterProvider } from './contexts/RegisterContext';
 import { authService } from './services/authService';
 import { rideService } from './services/rideService';
 import { userService } from './services/userService';
+import { computeEndTimeFromLeaflet } from './utils/time';
 import type { BookedRide } from './types';
 
 function App() {
@@ -140,12 +141,16 @@ function App() {
       const departure = JSON.parse(departureRaw);
       const destination = JSON.parse(destinationRaw);
 
+      // endTime somado à duração aproximada do Leaflet
+      const endTime = computeEndTimeFromLeaflet(createTime);
+
       const payload = {
         driverId,
         departureLatLng: [Number(departure.latitude), Number(departure.longitude)] as [number, number],
         destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number],
         date: createDate,
-        time: createTime,
+        startTime: createTime,
+        endTime,
         allSeats: createSeats,
         pricePerPassenger: price,
         passengerIds: [] as string[]
