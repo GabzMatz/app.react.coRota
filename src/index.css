@@ -1,0 +1,14 @@
+@import "tailwindcss";
+/* Reset e base */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #f9fafb;
+  color: #111827;
+}
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
