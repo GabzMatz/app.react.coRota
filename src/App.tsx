@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RidesList } from './pages/RidesList';
 import { SearchPage } from './pages/SearchPage';
+import { SearchDestinationPage } from './pages/SearchDestinationPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { RideDetailsPage } from './pages/RideDetailsPage';
 import { BookingPage } from './pages/BookingPage';
@@ -31,6 +32,7 @@ function App() {
   const [createStep, setCreateStep] = useState<'departure' | 'destination' | 'route' | 'date' | 'time' | 'passengers' | 'price'>('departure');
   const [selectedRide, setSelectedRide] = useState(null);
   const [searchData, setSearchData] = useState<{ departure: string; passengers: number } | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [bookedRides, setBookedRides] = useState<BookedRide[]>([]);
   // Create flow selections
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
@@ -71,7 +73,7 @@ function App() {
   const handlePageChange = (page: string, data?: any) => {
     setCurrentPage(page);
     if (data) {
-      if (page === 'search-results') {
+      if (page === 'search-results' || page === 'search-destination') {
         setSearchData(data);
       } else {
         setSelectedRide(data);
@@ -84,6 +86,10 @@ function App() {
       setCurrentPage('search-results');
     } else if (currentPage === 'booking') {
       setCurrentPage('ride-details');
+    } else if (currentPage === 'search-destination') {
+      setCurrentPage('search');
+    } else if (currentPage === 'search-results') {
+      setCurrentPage('search-destination');
     }
   };
 
@@ -209,7 +215,8 @@ function App() {
       ) : (
         <>
           {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} />}
-          {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage onTabChange={handleTabChange} onPageChange={handlePageChange} />}
+          {activeTab === 'search' && currentPage === 'search-destination' && <SearchDestinationPage onTabChange={handleTabChange} onBack={() => setCurrentPage('search')} onContinue={(rides) => { const departure = localStorage.getItem('searchDeparture'); const passengers = localStorage.getItem('searchPassengers'); setSearchData({ departure: departure || '', passengers: parseInt(passengers || '1') }); setSearchResults(rides); setCurrentPage('search-results'); }} searchData={searchData} />}
+          {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage rides={searchResults} onTabChange={handleTabChange} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'ride-details' && selectedRide && <RideDetailsPage rideDetails={selectedRide} onTabChange={handleTabChange} onBack={handleBack} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'booking' && selectedRide && <BookingPage rideDetails={selectedRide} searchData={searchData} onTabChange={handleTabChange} onBack={handleBack} onConfirmBooking={handleConfirmBooking} />}
           {activeTab === 'create' && createStep === 'departure' && <CreatePage onTabChange={handleTabChange} onStepChange={handleCreateStepChange} />}

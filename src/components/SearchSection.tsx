@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { Calendar, Users, MapPin } from 'lucide-react';
+import { Calendar, Users } from 'lucide-react';
 import panel from '../assets/panel.png';
+import { SearchInput } from './SearchInput';
+
+interface AddressResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  place_id: number;
+}
 
 interface SearchSectionProps {
   onSearch?: (searchData: { departure: string; passengers: number }) => void;
@@ -9,6 +17,7 @@ interface SearchSectionProps {
 export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
   const [departure, setDeparture] = useState('');
   const [passengers, setPassengers] = useState(1);
+  const [hasSelectedAddress, setHasSelectedAddress] = useState(false);
 
   const incrementPassengers = () => {
     setPassengers(prev => Math.min(4, prev + 1));
@@ -18,8 +27,39 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
     setPassengers(prev => Math.max(1, prev - 1));
   };
 
+  const handleAddressSelect = (address: AddressResult) => {
+    // Salvar coordenadas de partida quando um endereço é selecionado
+    const coordinates = {
+      latitude: parseFloat(address.lat),
+      longitude: parseFloat(address.lon),
+      address: address.display_name,
+      placeId: address.place_id
+    };
+    
+    localStorage.setItem('selectedAddress', JSON.stringify(coordinates));
+    setDeparture(address.display_name);
+    setHasSelectedAddress(true);
+    console.log('Coordenadas de partida salvas:', coordinates);
+  };
+
+  const handleDepartureChange = (value: string) => {
+    setDeparture(value);
+    // Se o usuário editar manualmente o campo, remover a flag de endereço selecionado
+    if (hasSelectedAddress) {
+      const storedAddress = localStorage.getItem('selectedAddress');
+      if (storedAddress) {
+        const parsed = JSON.parse(storedAddress);
+        // Se o texto não corresponder ao endereço salvo, remover a seleção
+        if (parsed.address !== value) {
+          setHasSelectedAddress(false);
+          localStorage.removeItem('selectedAddress');
+        }
+      }
+    }
+  };
+
   return (
-    <div className="relative">
+    <div className="relative overflow-visible">
       {/* Imagem Panel */}
       <div className="relative">
         <img 
@@ -31,19 +71,20 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
       {/* Card de Pesquisa Sobreposto */}
       <div className="absolute -bottom-15 left-0 right-0 z-10 px-4">
-        <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200">
+        <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 relative overflow-visible">
           {/* Campo de Partida */}
-          <div className="mb-4">
-            <div className="flex items-center border border-blue-300 rounded-lg p-3">
-              <MapPin className="w-5 h-5 text-blue-600 mr-3" />
-              <input
-                type="text"
-                placeholder="Partida"
-                value={departure}
-                onChange={(e) => setDeparture(e.target.value)}
-                className="flex-1 outline-none text-gray-700"
-              />
-            </div>
+          <div className="mb-4 relative z-50">
+            <SearchInput
+              placeholder="Partida"
+              value={departure}
+              onChange={handleDepartureChange}
+              onAddressSelect={handleAddressSelect}
+            />
+            {!hasSelectedAddress && departure && (
+              <p className="text-red-500 text-xs mt-1 ml-1">
+                Selecione um endereço da lista de sugestões
+              </p>
+            )}
           </div>
 
           {/* Linha com Calendário e Passageiros */}
@@ -75,8 +116,43 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
           {/* Botão Procurar */}
           <button 
-            onClick={() => onSearch?.({ departure, passengers })}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            onClick={() => {
+              // Verificar se o campo está preenchido
+              if (!departure.trim()) {
+                alert('Por favor, informe um endereço de partida.');
+                return;
+              }
+
+              // Verificar se há endereço de partida selecionado com coordenadas
+              const departureData = localStorage.getItem('selectedAddress');
+              if (!departureData) {
+                alert('Por favor, selecione um endereço de partida usando as sugestões que aparecem ao digitar.');
+                return;
+              }
+
+              // Verificar se as coordenadas são válidas
+              try {
+                const coordinates = JSON.parse(departureData);
+                if (!coordinates.latitude || !coordinates.longitude) {
+                  alert('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
+                  return;
+                }
+              } catch (error) {
+                alert('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
+                return;
+              }
+
+              // Salvar dados de partida e passageiros
+              localStorage.setItem('searchDeparture', departure);
+              localStorage.setItem('searchPassengers', String(passengers));
+              onSearch?.({ departure, passengers });
+            }}
+            className={`w-full py-3 rounded-lg font-medium transition-colors ${
+              !hasSelectedAddress || !departure.trim()
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            disabled={!hasSelectedAddress || !departure.trim()}
           >
             Procurar
           </button>

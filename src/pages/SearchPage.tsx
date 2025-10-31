@@ -14,12 +14,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChang
   };
 
   const handleSearch = (data: { departure: string; passengers: number }) => {
-    onPageChange?.('search-results', data);
+    onPageChange?.('search-destination', data);
   };
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      <SearchSection onSearch={handleSearch} />
+    <div className="min-h-screen bg-white pb-20 overflow-x-hidden">
+      <div className="overflow-visible">
+        <SearchSection onSearch={handleSearch} />
+      </div>
       <div className="pt-16">
         <RidesHistory />
       </div>

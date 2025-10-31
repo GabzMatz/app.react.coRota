@@ -64,7 +64,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative z-50 ${className}`}>
       <div className={`flex items-center border border-gray-300 rounded-lg px-4 py-3 ${disabled ? 'bg-gray-100' : 'bg-white'}`}>
         <Search className={`w-5 h-5 mr-3 ${disabled ? 'text-gray-300' : 'text-gray-400'}`} />
         <input
@@ -81,11 +81,13 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       </div>
 
       {showSuggestions && isFocused && inputValue && (
-        <AddressSuggestions
-          results={results}
-          loading={loading}
-          onSelect={handleAddressSelect}
-        />
+        <div className="absolute top-full left-0 right-0 z-50 mt-1">
+          <AddressSuggestions
+            results={results}
+            loading={loading}
+            onSelect={handleAddressSelect}
+          />
+        </div>
       )}
     </div>
   );

@@ -3,19 +3,19 @@ import { ArrowLeft, MapPin, Star, Users} from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
 interface RideDetails {
-  id: number;
+  id?: number | string;
   date: string;
   departureTime: string;
   arrivalTime: string;
   departureLocation: string;
   departureAddress: string;
-  departureDistance: string;
+  departureDistance?: string;
   arrivalLocation: string;
   arrivalAddress: string;
-  arrivalDistance: string;
+  arrivalDistance?: string;
   price: string;
   driverName: string;
-  driverRating: string;
+  driverRating?: string;
   driverPhoto?: string;
   maxPassengers: number;
 }
@@ -67,12 +67,30 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
               </div>
               <div className="font-bold text-gray-900 mb-1">{rideDetails.departureLocation}</div>
               <div className="text-sm text-gray-600 mb-2">{rideDetails.departureAddress}</div>
-              <div className="flex items-center text-sm text-gray-500">
-                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                  <span className="text-xs">🚶</span>
+              {/* Exibir distância quando disponível ou mockada */}
+              {/* {rideDetails.departureDistance ? (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  {rideDetails.departureDistance}
                 </div>
-                {rideDetails.departureDistance}
-              </div>
+              ) : (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  Distância não calculada
+                </div>
+              )} */}
+              {rideDetails.departureDistance && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  {rideDetails.departureDistance}
+                </div>
+              )}
             </div>
             <div className="ml-4">
               <span className="text-gray-400">›</span>
@@ -97,12 +115,30 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
               </div>
               <div className="font-bold text-gray-900 mb-1">{rideDetails.arrivalLocation}</div>
               <div className="text-sm text-gray-600 mb-2">{rideDetails.arrivalAddress}</div>
-              <div className="flex items-center text-sm text-gray-500">
-                <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
-                  <span className="text-xs">🚶</span>
+              {/* Exibir distância quando disponível ou mockada */}
+              {/* {rideDetails.arrivalDistance ? (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  {rideDetails.arrivalDistance}
                 </div>
-                {rideDetails.arrivalDistance}
-              </div>
+              ) : (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  Distância não calculada
+                </div>
+              )} */}
+              {rideDetails.arrivalDistance && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                    <span className="text-xs">🚶</span>
+                  </div>
+                  {rideDetails.arrivalDistance}
+                </div>
+              )}
             </div>
             <div className="ml-4">
               <span className="text-gray-400">›</span>
@@ -140,10 +176,12 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
              </div>
              <div>
                <div className="font-bold text-gray-900">{rideDetails.driverName}</div>
-               <div className="flex items-center text-sm text-gray-600">
-                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                 {rideDetails.driverRating}
-               </div>
+               {rideDetails.driverRating && (
+                 <div className="flex items-center text-sm text-gray-600">
+                   <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                   {rideDetails.driverRating}
+                 </div>
+               )}
              </div>
            </div>
            <div className="flex items-center">

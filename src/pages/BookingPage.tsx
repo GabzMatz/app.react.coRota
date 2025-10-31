@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, MapPin, Star, Users, Calendar, Clock } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
+import { rideService } from '../services/rideService';
 
 interface BookingPageProps {
   rideDetails: any;
@@ -11,6 +12,8 @@ interface BookingPageProps {
 }
 
 export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchData, onTabChange, onBack, onConfirmBooking }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
@@ -26,9 +29,56 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
     return `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
   };
 
-  const handleConfirmBooking = () => {
-    if (onConfirmBooking && searchData) {
-      onConfirmBooking(rideDetails, searchData);
+  const handleConfirmBooking = async () => {
+    console.log('handleConfirmBooking chamado');
+    console.log('rideDetails:', rideDetails);
+    console.log('rideDetails.id:', rideDetails?.id);
+    
+    if (!rideDetails || !rideDetails.id) {
+      console.error('ID da corrida não encontrado');
+      setError('ID da corrida não encontrado');
+      return;
+    }
+
+    // Obter ID do usuário logado
+    const authUserRaw = localStorage.getItem('authUser');
+    console.log('authUserRaw:', authUserRaw);
+    
+    if (!authUserRaw) {
+      console.error('Usuário não autenticado');
+      setError('Usuário não autenticado');
+      return;
+    }
+
+    try {
+      const authUser = JSON.parse(authUserRaw);
+      const userId = authUser.id;
+      console.log('userId:', userId);
+
+      if (!userId) {
+        console.error('ID do usuário não encontrado');
+        setError('ID do usuário não encontrado');
+        return;
+      }
+
+      setIsLoading(true);
+      setError('');
+
+      console.log('Fazendo requisição PUT para:', rideDetails.id, userId);
+      
+      // Fazer a requisição PUT para reservar a corrida
+      const response = await rideService.chooseRide(rideDetails.id, userId);
+      console.log('Resposta da API:', response);
+
+      // Se chegou aqui, a reserva foi bem-sucedida
+      if (onConfirmBooking && searchData) {
+        onConfirmBooking(rideDetails, searchData);
+      }
+    } catch (err) {
+      console.error('Erro ao confirmar reserva:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao confirmar reserva');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -134,12 +184,30 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
           </div>
         </div>
 
+        {/* Mensagem de erro */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Botão Confirmar Reserva */}
         <button 
-          onClick={handleConfirmBooking}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Botão clicado');
+            handleConfirmBooking();
+          }}
+          disabled={isLoading}
+          className={`w-full py-4 rounded-lg font-medium transition-colors ${
+            isLoading
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          type="button"
         >
-          Confirmar Reserva
+          {isLoading ? 'Confirmando...' : 'Confirmar Reserva'}
         </button>
       </div>
 

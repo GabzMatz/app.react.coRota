@@ -40,6 +40,25 @@ export interface MeResponse {
   email: string;
 }
 
+export interface UserResponse {
+  corporateEmail: string;
+  cpf: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  password: string;
+  companyId: string;
+  addressId: string;
+  hasCar: boolean;
+  isActive: boolean;
+  carInfo?: string;
+  id: string;
+  createdAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+}
+
 class UserService {
   private baseURL = 'http://localhost:3000';
 
@@ -90,6 +109,27 @@ class UserService {
     }
 
     const data: MeResponse = await response.json();
+    return data;
+  }
+
+  // Obter usuário por ID
+  async getUserById(userId: string): Promise<UserResponse> {
+    const token = localStorage.getItem('authToken');
+
+    const response = await fetch(`${this.baseURL}/users/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    const data: UserResponse = await response.json();
     return data;
   }
 }

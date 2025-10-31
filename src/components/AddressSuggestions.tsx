@@ -37,7 +37,7 @@ export const AddressSuggestions: React.FC<AddressSuggestionsProps> = ({
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto ${className}`}>
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-[200px] overflow-y-auto z-[100] ${className}`}>
       {results.map((result) => (
         <button
           key={result.place_id}

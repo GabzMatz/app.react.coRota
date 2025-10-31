@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { SearchInput } from '../components/SearchInput';
 import { BottomNav } from '../components/BottomNav';
-import { useTripData } from '../hooks/useTripData';
+import { rideService } from '../services/rideService';
 
 interface AddressResult {
   display_name: string;
@@ -11,23 +11,29 @@ interface AddressResult {
   place_id: number;
 }
 
-interface CreateDestinationPageProps {
+interface SearchDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
-  onStepChange?: (step: 'departure' | 'destination' | 'route') => void;
+  onContinue?: (rides: any[]) => void;
+  searchData?: { departure: string; passengers: number };
 }
 
-export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ onTabChange, onBack, onStepChange }) => {
+export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({ 
+  onTabChange, 
+  onBack, 
+  onContinue,
+  searchData 
+}) => {
   const [destination, setDestination] = useState('');
   const [useCompanyAddress, setUseCompanyAddress] = useState(false);
-  const { saveTripData } = useTripData();
+  const [loading, setLoading] = useState(false);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
 
   const handleAddressSelect = (address: AddressResult) => {
-    saveDestinationCoordinates(address); // Salva as coordenadas do destino automaticamente
+    saveDestinationCoordinates(address);
     console.log('Destino selecionado e coordenadas salvas:', address);
   };
 
@@ -48,43 +54,47 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Verificar se temos as informações necessárias
-    const departureData = localStorage.getItem('selectedAddress');
     const destinationData = localStorage.getItem('selectedDestination');
-    
-    if (!departureData) {
-      alert('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
-      return;
-    }
+    const departureData = localStorage.getItem('selectedAddress');
     
     if (!destinationData) {
       alert('Por favor, selecione um destino ou marque "Usar endereço da empresa".');
       return;
     }
 
-    // Salvar informações completas da viagem
-    const tripData = {
-      departure: JSON.parse(departureData),
-      destination: JSON.parse(destinationData),
-      createdAt: new Date().toISOString(),
-      id: Date.now().toString()
-    };
+    if (!departureData) {
+      alert('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
+      return;
+    }
 
-    // Salvar usando o hook
-    const success = saveTripData(tripData);
-    
-    if (success) {
-      console.log('Informações da viagem salvas com sucesso:', tripData);
-      console.log('Partida:', tripData.departure);
-      console.log('Destino:', tripData.destination);
+    try {
+      setLoading(true);
       
-      // Navegar para a tela de rota selecionada
-      setTimeout(() => {
-        onStepChange?.('route');
-      }, 500);
-    } else {
-      alert('Erro ao salvar as informações da viagem. Tente novamente.');
+      const departure = JSON.parse(departureData);
+      const destination = JSON.parse(destinationData);
+
+      // Verificar se temos coordenadas válidas
+      if (!departure.latitude || !departure.longitude || !destination.latitude || !destination.longitude) {
+        throw new Error('Coordenadas de partida ou destino inválidas.');
+      }
+
+      // Chamar API para buscar corridas sugeridas
+      const response = await rideService.suggestRides({
+        departureLatLng: [Number(departure.latitude), Number(departure.longitude)] as [number, number],
+        destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number]
+      });
+
+      // Passar os resultados para a próxima página
+      const rides = response.data || [];
+      onContinue?.(rides);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao buscar corridas sugeridas';
+      alert(message);
+      console.error('Erro ao buscar corridas:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -138,7 +148,7 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
             />
             <span className="ml-3 text-sm font-medium text-gray-700">
-              Usar endereço da empresa
+              Usar endereço da empresa?
             </span>
           </label>
         </div>
@@ -148,16 +158,18 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continuar
+          {loading ? 'Buscando...' : 'Continuar'}
         </button>
       </div>
 
       <BottomNav 
-        activeTab="create"
+        activeTab="search"
         onTabChange={handleTabChange}
       />
     </div>
   );
 };
+
