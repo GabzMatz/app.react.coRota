@@ -41,8 +41,13 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
     setRideToCancel(null);
   };
 
-  // Filtrar apenas corridas que não estejam canceladas
-  const activeRides = bookedRides.filter(ride => ride.status !== 'cancelled');
+  // Ordenar por data (mais recente primeiro) - mostrar todas as corridas, incluindo canceladas
+  const activeRides = bookedRides.sort((a, b) => {
+    // Ordenar do mais recente para o mais antigo usando sortDate
+    const dateA = a.sortDate || 0;
+    const dateB = b.sortDate || 0;
+    return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+  });
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -64,6 +69,7 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
               price={booking.rideDetails.price}
               driverName={booking.rideDetails.driverName}
               driverPhoto={booking.rideDetails.driverPhoto}
+              status={booking.status}
               onEdit={() => handleEdit(booking.id)}
               onCancel={() => handleCancel(booking.id)}
             />

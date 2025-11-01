@@ -223,6 +223,22 @@ function App() {
               reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
             ]);
 
+            // Obter timestamp da data da corrida para ordenação
+            let sortDateTimestamp: number;
+            if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
+              sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
+            } else if (ride.date) {
+              sortDateTimestamp = new Date(ride.date as string).getTime();
+            } else {
+              // Fallback para data de criação se não houver data da corrida
+              const createdAt = item.createdAt;
+              if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
+                sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
+              } else {
+                sortDateTimestamp = new Date().getTime();
+              }
+            }
+
             return {
               id: item.id || item.rideId,
               rideDetails: {
@@ -246,8 +262,9 @@ function App() {
                 passengers: ride.allSeats - ride.availableSeats
               },
               bookingDate: formatDate(item.createdAt),
-              status: (item.status === 'completed' || item.status === 'canceled' ? 'cancelled' : 'confirmed') as 'confirmed' | 'cancelled',
-              role: item.role as 'driver' | 'passenger'
+              status: item.status || 'pending',
+              role: item.role as 'driver' | 'passenger',
+              sortDate: sortDateTimestamp
             };
           });
 

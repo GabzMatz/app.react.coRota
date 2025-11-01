@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from './Card';
 import { Edit, X } from 'lucide-react';
+import { RideStatus } from '../types';
 
 interface RideCardProps {
   departureTime: string;
@@ -10,6 +11,7 @@ interface RideCardProps {
   driverName: string;
   driverPhoto?: string;
   features?: string[];
+  status?: string;
   onEdit?: () => void;
   onCancel?: () => void;
 }
@@ -21,6 +23,7 @@ export const RideCard: React.FC<RideCardProps> = ({
   price,
   driverName,
   driverPhoto,
+  status,
   onEdit,
   onCancel
 }) => {
@@ -33,6 +36,22 @@ export const RideCard: React.FC<RideCardProps> = ({
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=3b82f6&color=ffffff&size=56`;
   };
+
+  // Função para obter cor e texto do status
+  const getStatusConfig = (status?: string) => {
+    switch (status) {
+      case RideStatus.COMPLETED:
+        return { color: 'text-green-500', dotColor: 'bg-green-500', label: 'Concluída' };
+      case RideStatus.CANCELED:
+        return { color: 'text-red-500', dotColor: 'bg-red-500', label: 'Cancelada' };
+      case RideStatus.PENDING:
+        return { color: 'text-yellow-500', dotColor: 'bg-yellow-500', label: 'Pendente' };
+      default:
+        return { color: 'text-gray-500', dotColor: 'bg-gray-500', label: 'Pendente' };
+    }
+  };
+
+  const statusConfig = getStatusConfig(status);
   
   return (
     <Card className="mx-4 p-1">
@@ -74,8 +93,14 @@ export const RideCard: React.FC<RideCardProps> = ({
               className="w-14 rounded-full object-cover"
               style={{ border: '2px solid #d1d5db' }}
             />
-            <div className="flex items-center gap-2 text-black">
+            <div className="flex flex-col gap-1">
               <div className="font-medium text-black">{driverName}</div>
+              {status && (
+                <div className={`flex items-center gap-1.5 ${statusConfig.color} text-xs`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}></div>
+                  <span className={statusConfig.color}>{statusConfig.label}</span>
+                </div>
+              )}
             </div>
           </div>
           
