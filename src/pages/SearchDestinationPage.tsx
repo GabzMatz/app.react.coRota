@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { SearchInput } from '../components/SearchInput';
 import { BottomNav } from '../components/BottomNav';
 import { rideService } from '../services/rideService';
+import { useToast } from '../contexts/ToastContext';
 
 interface AddressResult {
   display_name: string;
@@ -24,6 +25,7 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
   onContinue,
   searchData 
 }) => {
+  const { showError } = useToast();
   const [destination, setDestination] = useState('');
   const [useCompanyAddress, setUseCompanyAddress] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,12 +62,12 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
     const departureData = localStorage.getItem('selectedAddress');
     
     if (!destinationData) {
-      alert('Por favor, selecione um destino ou marque "Usar endereço da empresa".');
+      showError('Por favor, selecione um destino ou marque "Usar endereço da empresa".');
       return;
     }
 
     if (!departureData) {
-      alert('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
+      showError('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
       return;
     }
 
@@ -91,7 +93,7 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       onContinue?.(rides);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao buscar corridas sugeridas';
-      alert(message);
+      showError(message);
       console.error('Erro ao buscar corridas:', error);
     } finally {
       setLoading(false);
@@ -153,6 +155,16 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
           </label>
         </div>
       </div>
+
+      {/* Loading overlay quando estiver buscando */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-700 text-base font-medium">Buscando corridas disponíveis...</p>
+          </div>
+        </div>
+      )}
 
       {/* Botão Continuar - Fixo na parte inferior */}
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">

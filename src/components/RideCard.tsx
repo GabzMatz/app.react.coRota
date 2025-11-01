@@ -12,6 +12,7 @@ interface RideCardProps {
   driverPhoto?: string;
   features?: string[];
   status?: string;
+  role?: 'driver' | 'passenger';
   onEdit?: () => void;
   onCancel?: () => void;
 }
@@ -24,6 +25,7 @@ export const RideCard: React.FC<RideCardProps> = ({
   driverName,
   driverPhoto,
   status,
+  role,
   onEdit,
   onCancel
 }) => {
@@ -112,12 +114,14 @@ export const RideCard: React.FC<RideCardProps> = ({
             >
               <X size={18}/>
             </button>
-            <button
-              onClick={onEdit}
-              className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
-            >
-              <Edit size={18} />
-            </button>
+            {role === 'driver' && (
+              <button
+                onClick={onEdit}
+                className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
+              >
+                <Edit size={18} />
+              </button>
+            )}
           </div>
         </div>       
       </CardContent>

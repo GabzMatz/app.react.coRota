@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, Users } from 'lucide-react';
 import panel from '../assets/panel.png';
 import { SearchInput } from './SearchInput';
+import { useToast } from '../contexts/ToastContext';
 
 interface AddressResult {
   display_name: string;
@@ -15,6 +16,7 @@ interface SearchSectionProps {
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
+  const { showError } = useToast();
   const [departure, setDeparture] = useState('');
   const [passengers, setPassengers] = useState(1);
   const [hasSelectedAddress, setHasSelectedAddress] = useState(false);
@@ -119,14 +121,14 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             onClick={() => {
               // Verificar se o campo está preenchido
               if (!departure.trim()) {
-                alert('Por favor, informe um endereço de partida.');
+                showError('Por favor, informe um endereço de partida.');
                 return;
               }
 
               // Verificar se há endereço de partida selecionado com coordenadas
               const departureData = localStorage.getItem('selectedAddress');
               if (!departureData) {
-                alert('Por favor, selecione um endereço de partida usando as sugestões que aparecem ao digitar.');
+                showError('Por favor, selecione um endereço de partida usando as sugestões que aparecem ao digitar.');
                 return;
               }
 
@@ -134,11 +136,11 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
               try {
                 const coordinates = JSON.parse(departureData);
                 if (!coordinates.latitude || !coordinates.longitude) {
-                  alert('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
+                  showError('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
                   return;
                 }
               } catch (error) {
-                alert('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
+                showError('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
                 return;
               }
 

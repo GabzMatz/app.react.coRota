@@ -5,6 +5,7 @@ import { SearchDestinationPage } from './pages/SearchDestinationPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { RideDetailsPage } from './pages/RideDetailsPage';
 import { BookingPage } from './pages/BookingPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { CreatePage } from './pages/CreatePage';
 import { CreateDestinationPage } from './pages/CreateDestinationPage';
 import { RouteSelectedPage } from './pages/RouteSelectedPage';
@@ -17,13 +18,16 @@ import RegisterStep2Page from './pages/RegisterStep2Page';
 import RegisterStep3Page from './pages/RegisterStep3Page';
 import LoginPage from './pages/LoginPage';
 import { RegisterProvider } from './contexts/RegisterContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { authService } from './services/authService';
 import { rideService } from './services/rideService';
 import { userService } from './services/userService';
 import { computeEndTimeFromLeaflet } from './utils/time';
+import { useToast } from './contexts/ToastContext';
 import type { BookedRide } from './types';
 
-function App() {
+function AppContent() {
+  const { showSuccess, showError } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
   const [authMode, setAuthMode] = useState<'register' | 'login'>('login');
   const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
@@ -34,6 +38,7 @@ function App() {
   const [searchData, setSearchData] = useState<{ departure: string; passengers: number } | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [bookedRides, setBookedRides] = useState<BookedRide[]>([]);
+  const [loadingRideHistory, setLoadingRideHistory] = useState(false);
   // Create flow selections
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
   const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
@@ -181,6 +186,7 @@ function App() {
     const loadRideHistory = async () => {
       if (activeTab === 'routes' && isAuthenticated) {
         try {
+          setLoadingRideHistory(true);
           const userId = await getDriverId();
           const history = await rideService.getRideHistory(userId);
           
@@ -208,6 +214,28 @@ function App() {
           const formatPrice = (price: number) => {
             return `R$ ${price.toFixed(2).replace('.', ',')}`;
           };
+
+          // Buscar dados de todos os motoristas únicos primeiro
+          const uniqueDriverIds = [...new Set(history.map((item: any) => item.ride.driverId).filter(Boolean))];
+          
+          const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
+            try {
+              const driverData = await userService.getUserById(driverId);
+              return { driverId, driverData };
+            } catch (error) {
+              console.error(`Erro ao buscar motorista ${driverId}:`, error);
+              return { driverId, driverData: null };
+            }
+          });
+
+          const driverDataResults = await Promise.all(driverDataPromises);
+          
+          // Criar um mapa de driverId -> driverData para acesso rápido
+          const driverMap = new Map(
+            driverDataResults
+              .filter(result => result.driverData)
+              .map(result => [result.driverId, result.driverData])
+          );
 
           // Transformar dados da API para o formato esperado
           const transformedRidesPromises = history.map(async (item: any) => {
@@ -239,6 +267,12 @@ function App() {
               }
             }
 
+            // Buscar dados do motorista
+            const driverData = driverMap.get(ride.driverId);
+            const driverName = driverData 
+              ? `${driverData.firstName} ${driverData.lastName}`.trim()
+              : `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`;
+
             return {
               id: item.id || item.rideId,
               rideDetails: {
@@ -247,7 +281,7 @@ function App() {
                 arrivalTime,
                 date: formatDate(ride.date),
                 price: formatPrice(ride.pricePerPassenger),
-                driverName: 'Motorista', // Será preenchido pela busca de dados do motorista
+                driverName,
                 driverPhoto: null,
                 driverRating: '4.5',
                 departureLocation: 'Origem',
@@ -272,7 +306,12 @@ function App() {
           setBookedRides(transformedRides);
         } catch (error) {
           console.error('Erro ao carregar histórico de corridas:', error);
+        } finally {
+          setLoadingRideHistory(false);
         }
+      } else {
+        // Resetar loading se não estiver na aba routes
+        setLoadingRideHistory(false);
       }
     };
 
@@ -313,7 +352,7 @@ function App() {
       };
 
       await rideService.createRide(payload);
-      alert('Carona criada com sucesso!');
+      showSuccess('Carona criada com sucesso!');
 
       // Reset create flow
       setCreateStep('departure');
@@ -324,14 +363,14 @@ function App() {
       setCurrentPage('search');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erro ao criar carona';
-      alert(msg);
+      showError(msg);
     }
   };
 
   return (
     <RegisterProvider>
-      {/* Se não estiver autenticado, mostrar página de autenticação */}
-      {!isAuthenticated ? (
+        {/* Se não estiver autenticado, mostrar página de autenticação */}
+        {!isAuthenticated ? (
         authMode === 'register' ? (
           registerStep === 1 ? (
             <RegisterPage 
@@ -354,7 +393,12 @@ function App() {
           )
         ) : (
           <LoginPage 
-            onLoginSuccess={() => setIsAuthenticated(true)} 
+            onLoginSuccess={() => {
+              setIsAuthenticated(true);
+              // Redirecionar para a tela de busca (início)
+              setActiveTab('search');
+              setCurrentPage('search');
+            }} 
             onRegisterClick={() => {
               setAuthMode('register');
               setRegisterStep(1);
@@ -379,11 +423,20 @@ function App() {
           {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} />}
           {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} />}
           {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} />}
-          {activeTab === 'routes' && <RidesList onTabChange={handleTabChange} bookedRides={bookedRides} onCancelBooking={handleCancelBooking} />}
+          {activeTab === 'routes' && <RidesList onTabChange={handleTabChange} bookedRides={bookedRides} onCancelBooking={handleCancelBooking} isLoading={loadingRideHistory} />}
+          {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
           {/* Adicione outras abas conforme necessário */}
         </>
-      )}
-    </RegisterProvider>
+        )}
+      </RegisterProvider>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

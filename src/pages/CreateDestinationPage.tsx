@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useToast } from '../contexts/ToastContext';
 import { ArrowLeft } from 'lucide-react';
 import { SearchInput } from '../components/SearchInput';
 import { BottomNav } from '../components/BottomNav';
@@ -18,6 +19,7 @@ interface CreateDestinationPageProps {
 }
 
 export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ onTabChange, onBack, onStepChange }) => {
+  const { showError } = useToast();
   const [destination, setDestination] = useState('');
   const [useCompanyAddress, setUseCompanyAddress] = useState(false);
   const { saveTripData } = useTripData();
@@ -54,12 +56,12 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
     const destinationData = localStorage.getItem('selectedDestination');
     
     if (!departureData) {
-      alert('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
+      showError('Erro: Endereço de partida não encontrado. Volte para a tela anterior.');
       return;
     }
     
     if (!destinationData) {
-      alert('Por favor, selecione um destino ou marque "Usar endereço da empresa".');
+      showError('Por favor, selecione um destino ou marque "Usar endereço da empresa".');
       return;
     }
 
@@ -84,7 +86,7 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
         onStepChange?.('route');
       }, 500);
     } else {
-      alert('Erro ao salvar as informações da viagem. Tente novamente.');
+      showError('Erro ao salvar as informações da viagem. Tente novamente.');
     }
   };
 

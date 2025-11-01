@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AuthCard, { type AuthField } from '../components/AuthCard';
 import { useRegister } from '../contexts/RegisterContext';
+import { useToast } from '../contexts/ToastContext';
 import { addressService, type AddressCreateRequest } from '../services/addressService';
 import { userService, type UserRegisterRequest } from '../services/userService';
 import { type Company } from '../services/companyService';
@@ -11,6 +12,7 @@ interface RegisterStep3PageProps {
 }
 
 const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBack }) => {
+  const { showError } = useToast();
   const { updateRegisterData, getCompleteData, clearRegisterData } = useRegister();
   const initialFormData = {
     cep: '',
@@ -177,8 +179,7 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
       onComplete();
     } catch (error) {
       console.error('❌ Erro no processo de registro:', error);
-      // Aqui você pode implementar tratamento de erro na UI
-      alert('Erro no processo de registro. Tente novamente.');
+      showError('Erro no processo de registro. Tente novamente.');
     }
   };
 

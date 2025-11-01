@@ -9,9 +9,10 @@ interface RidesListProps {
   onTabChange?: (tab: string) => void;
   bookedRides?: BookedRide[];
   onCancelBooking?: (bookingId: string) => void;
+  isLoading?: boolean;
 }
 
-export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides = [], onCancelBooking }) => {
+export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides = [], onCancelBooking, isLoading = false }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [rideToCancel, setRideToCancel] = useState<string | null>(null);
 
@@ -53,7 +54,12 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
     <div className="min-h-screen bg-white pb-20">
       <Header />
       
-      {activeRides.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600 text-base">Carregando histórico de corridas...</p>
+        </div>
+      ) : activeRides.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <p className="text-gray-500 text-lg">Nenhuma reserva encontrada</p>
           <p className="text-gray-400 text-sm mt-2">Faça uma busca para encontrar caronas disponíveis</p>
@@ -70,6 +76,7 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
               driverName={booking.rideDetails.driverName}
               driverPhoto={booking.rideDetails.driverPhoto}
               status={booking.status}
+              role={booking.role}
               onEdit={() => handleEdit(booking.id)}
               onCancel={() => handleCancel(booking.id)}
             />
