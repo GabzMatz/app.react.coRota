@@ -159,6 +159,53 @@ class RideService {
 
     return response.json().catch(() => ({}));
   }
+
+  async getRideById(rideId: string | number): Promise<any> {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    const response = await fetch(`${this.baseURL}/ride/${rideId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json().catch(() => ({}));
+  }
+
+  async updateRide(rideId: string | number, payload: CreateRideRequest): Promise<any> {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    const response = await fetch(`${this.baseURL}/ride/${rideId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json().catch(() => ({}));
+  }
 }
 
 export const rideService = new RideService();

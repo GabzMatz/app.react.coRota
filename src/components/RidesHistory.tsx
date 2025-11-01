@@ -32,8 +32,8 @@ const defaultRides: Ride[] = [
 
 export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = defaultRides }) => {
   const handleRideClick = (rideId: number) => {
+    // TODO: Implementar a lógica de navegação para a corrida selecionada
     console.log('Clicou na corrida:', rideId);
-    // Aqui você pode adicionar navegação ou outras ações
   };
 
   return (

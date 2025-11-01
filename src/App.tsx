@@ -43,6 +43,10 @@ function AppContent() {
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
   const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
   const [createSeats, setCreateSeats] = useState<number | null>(null);
+  const [editingRideId, setEditingRideId] = useState<string | null>(null);
+  const [editInitialDeparture, setEditInitialDeparture] = useState<string>('');
+  const [editInitialDestination, setEditInitialDestination] = useState<string>('');
+  const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
   // price is passed directly to handler; no need to store separately
 
   const handleTabChange = (tab: string) => {
@@ -318,6 +322,62 @@ function AppContent() {
     loadRideHistory();
   }, [activeTab, isAuthenticated]);
 
+  const handleEditRide = async (rideId: string) => {
+    try {
+      // Buscar dados da corrida
+      const rideData = await rideService.getRideById(rideId);
+      setEditingRideId(rideId);
+
+      // Converter timestamp do Firestore para data se necessário
+      let rideDate: Date;
+      if (rideData.date && typeof rideData.date === 'object' && '_seconds' in rideData.date) {
+        rideDate = new Date(rideData.date._seconds * 1000);
+      } else {
+        rideDate = new Date(rideData.date);
+      }
+
+      // Formatar data para YYYY-MM-DD
+      const year = rideDate.getFullYear();
+      const month = String(rideDate.getMonth() + 1).padStart(2, '0');
+      const day = String(rideDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+
+      // Fazer reverse geocoding para obter endereços
+      const [departureAddress, destinationAddress] = await Promise.all([
+        reverseGeocode(rideData.departureLatLng[0], rideData.departureLatLng[1]),
+        reverseGeocode(rideData.destinationLatLng[0], rideData.destinationLatLng[1])
+      ]);
+
+      // Salvar coordenadas no localStorage
+      localStorage.setItem('selectedAddress', JSON.stringify({
+        latitude: rideData.departureLatLng[0],
+        longitude: rideData.departureLatLng[1],
+        address: departureAddress
+      }));
+
+      localStorage.setItem('selectedDestination', JSON.stringify({
+        latitude: rideData.destinationLatLng[0],
+        longitude: rideData.destinationLatLng[1],
+        address: destinationAddress
+      }));
+
+      // Preencher estados do fluxo de criação
+      setCreateDate(formattedDate);
+      setCreateTime(rideData.startTime || rideData.time || '');
+      setCreateSeats(rideData.allSeats || rideData.availableSeats || 1);
+      setEditInitialDeparture(departureAddress);
+      setEditInitialDestination(destinationAddress);
+      setEditInitialPrice(rideData.pricePerPassenger || null);
+
+      // Navegar para o fluxo de criação na primeira etapa
+      setCreateStep('departure');
+      setActiveTab('create');
+    } catch (error) {
+      console.error('Erro ao carregar dados da corrida:', error);
+      showError('Erro ao carregar dados da corrida para edição');
+    }
+  };
+
   const handleCreateRide = async (price: number) => {
     try {
       // Ensure driver id
@@ -351,18 +411,28 @@ function AppContent() {
         passengerIds: [] as string[]
       };
 
-      await rideService.createRide(payload);
-      showSuccess('Carona criada com sucesso!');
+      // Verificar se está editando ou criando
+      if (editingRideId) {
+        await rideService.updateRide(editingRideId, payload);
+        showSuccess('Carona atualizada com sucesso!');
+      } else {
+        await rideService.createRide(payload);
+        showSuccess('Carona criada com sucesso!');
+      }
 
       // Reset create flow
       setCreateStep('departure');
       setCreateDate(null);
       setCreateTime(null);
       setCreateSeats(null);
+      setEditingRideId(null);
+      setEditInitialDeparture('');
+      setEditInitialDestination('');
+      setEditInitialPrice(null);
       setActiveTab('routes');
       setCurrentPage('search');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erro ao criar carona';
+      const msg = e instanceof Error ? e.message : editingRideId ? 'Erro ao atualizar carona' : 'Erro ao criar carona';
       showError(msg);
     }
   };
@@ -404,7 +474,7 @@ function AppContent() {
               setRegisterStep(1);
             }}
             onForgotPasswordClick={() => {
-              // Aqui você pode implementar a lógica de recuperação de senha
+              // TODO: Implementar a lógica de recuperação de senha
               console.log('Esqueceu a senha clicado');
             }}
           />
@@ -416,14 +486,14 @@ function AppContent() {
           {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage rides={searchResults} onTabChange={handleTabChange} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'ride-details' && selectedRide && <RideDetailsPage rideDetails={selectedRide} onTabChange={handleTabChange} onBack={handleBack} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'booking' && selectedRide && <BookingPage rideDetails={selectedRide} searchData={searchData || undefined} onTabChange={handleTabChange} onBack={handleBack} onConfirmBooking={handleConfirmBooking} />}
-          {activeTab === 'create' && createStep === 'departure' && <CreatePage onTabChange={handleTabChange} onStepChange={handleCreateStepChange} />}
-          {activeTab === 'create' && createStep === 'destination' && <CreateDestinationPage onTabChange={handleTabChange} onBack={handleCreateBack} onStepChange={handleCreateStepChange} />}
+          {activeTab === 'create' && createStep === 'departure' && <CreatePage onTabChange={handleTabChange} onStepChange={handleCreateStepChange} initialDeparture={editInitialDeparture} />}
+          {activeTab === 'create' && createStep === 'destination' && <CreateDestinationPage onTabChange={handleTabChange} onBack={handleCreateBack} onStepChange={handleCreateStepChange} initialDestination={editInitialDestination} />}
           {activeTab === 'create' && createStep === 'route' && <RouteSelectedPage onTabChange={handleTabChange} onBack={handleCreateBack} onNavigateToDateSelection={() => setCreateStep('date')} />}
-          {activeTab === 'create' && createStep === 'date' && <DateSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onDateSelected={(d) => { const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); setCreateDate(`${yyyy}-${mm}-${dd}`); setCreateStep('time'); }} />}
-          {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} />}
-          {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} />}
-          {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} />}
-          {activeTab === 'routes' && <RidesList onTabChange={handleTabChange} bookedRides={bookedRides} onCancelBooking={handleCancelBooking} isLoading={loadingRideHistory} />}
+          {activeTab === 'create' && createStep === 'date' && <DateSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onDateSelected={(d) => { const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); setCreateDate(`${yyyy}-${mm}-${dd}`); setCreateStep('time'); }} initialDate={createDate || undefined} />}
+          {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} initialTime={createTime || undefined} />}
+          {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} initialCount={createSeats || undefined} />}
+          {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} initialPrice={editInitialPrice || undefined} />}
+          {activeTab === 'routes' && <RidesList onTabChange={handleTabChange} bookedRides={bookedRides} onCancelBooking={handleCancelBooking} onEditRide={handleEditRide} isLoading={loadingRideHistory} />}
           {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
           {/* Adicione outras abas conforme necessário */}
         </>

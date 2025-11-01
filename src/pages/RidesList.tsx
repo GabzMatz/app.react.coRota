@@ -9,10 +9,11 @@ interface RidesListProps {
   onTabChange?: (tab: string) => void;
   bookedRides?: BookedRide[];
   onCancelBooking?: (bookingId: string) => void;
+  onEditRide?: (rideId: string) => void;
   isLoading?: boolean;
 }
 
-export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides = [], onCancelBooking, isLoading = false }) => {
+export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides = [], onCancelBooking, onEditRide, isLoading = false }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [rideToCancel, setRideToCancel] = useState<string | null>(null);
 
@@ -21,7 +22,7 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
   };
 
   const handleEdit = (rideId: string) => {
-    console.log('Editar carona:', rideId);
+    onEditRide?.(rideId);
   };
 
   const handleCancel = (rideId: string) => {
@@ -77,7 +78,7 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
               driverPhoto={booking.rideDetails.driverPhoto}
               status={booking.status}
               role={booking.role}
-              onEdit={() => handleEdit(booking.id)}
+              onEdit={() => handleEdit(booking.rideDetails.id || booking.id)}
               onCancel={() => handleCancel(booking.id)}
             />
           ))}

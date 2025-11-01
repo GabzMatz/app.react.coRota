@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
@@ -6,14 +6,22 @@ interface TimeSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onTimeSelected?: (time: string) => void;
+  initialTime?: string; // HH:mm
 }
 
 export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onTimeSelected 
+  onTimeSelected,
+  initialTime
 }) => {
-  const [selectedTime, setSelectedTime] = useState('06:00');
+  const [selectedTime, setSelectedTime] = useState(initialTime || '06:00');
+  
+  useEffect(() => {
+    if (initialTime) {
+      setSelectedTime(initialTime);
+    }
+  }, [initialTime]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);

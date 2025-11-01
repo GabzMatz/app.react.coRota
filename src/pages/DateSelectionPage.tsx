@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
@@ -6,15 +6,26 @@ interface DateSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onDateSelected?: (date: Date) => void;
+  initialDate?: string; // YYYY-MM-DD
 }
 
 export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onDateSelected 
+  onDateSelected,
+  initialDate
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [currentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    initialDate ? new Date(initialDate) : null
+  );
+  const [currentMonth] = useState(initialDate ? new Date(initialDate) : new Date());
+  
+  useEffect(() => {
+    if (initialDate) {
+      const date = new Date(initialDate);
+      setSelectedDate(date);
+    }
+  }, [initialDate]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);

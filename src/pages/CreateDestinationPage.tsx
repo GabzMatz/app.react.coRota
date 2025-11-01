@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { ArrowLeft } from 'lucide-react';
 import { SearchInput } from '../components/SearchInput';
@@ -16,13 +16,21 @@ interface CreateDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onStepChange?: (step: 'departure' | 'destination' | 'route') => void;
+  initialDestination?: string;
 }
 
-export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ onTabChange, onBack, onStepChange }) => {
+export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ onTabChange, onBack, onStepChange, initialDestination }) => {
   const { showError } = useToast();
-  const [destination, setDestination] = useState('');
+  const [destination, setDestination] = useState(initialDestination || '');
   const [useCompanyAddress, setUseCompanyAddress] = useState(false);
   const { saveTripData } = useTripData();
+
+  // Atualizar quando initialDestination mudar
+  useEffect(() => {
+    if (initialDestination) {
+      setDestination(initialDestination);
+    }
+  }, [initialDestination]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);

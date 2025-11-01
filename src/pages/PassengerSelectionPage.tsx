@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
@@ -6,14 +6,22 @@ interface PassengerSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onPassengerSelected?: (count: number) => void;
+  initialCount?: number;
 }
 
 export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onPassengerSelected 
+  onPassengerSelected,
+  initialCount
 }) => {
-  const [passengerCount, setPassengerCount] = useState(2);
+  const [passengerCount, setPassengerCount] = useState(initialCount || 2);
+  
+  useEffect(() => {
+    if (initialCount) {
+      setPassengerCount(initialCount);
+    }
+  }, [initialCount]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);

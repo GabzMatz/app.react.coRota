@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
@@ -6,14 +6,22 @@ interface PriceSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onPriceSelected?: (price: number) => void;
+  initialPrice?: number;
 }
 
 export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onPriceSelected 
+  onPriceSelected,
+  initialPrice
 }) => {
-  const [price, setPrice] = useState(20);
+  const [price, setPrice] = useState(initialPrice || 20);
+  
+  useEffect(() => {
+    if (initialPrice) {
+      setPrice(initialPrice);
+    }
+  }, [initialPrice]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);

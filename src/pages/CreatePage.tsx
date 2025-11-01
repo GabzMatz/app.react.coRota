@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SearchInput } from '../components/SearchInput';
 import { BottomNav } from '../components/BottomNav';
 
@@ -12,10 +12,18 @@ interface AddressResult {
 interface CreatePageProps {
   onTabChange?: (tab: string) => void;
   onStepChange?: (step: 'departure' | 'destination') => void;
+  initialDeparture?: string;
 }
 
-export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChange }) => {
-  const [departure, setDeparture] = useState('');
+export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChange, initialDeparture }) => {
+  const [departure, setDeparture] = useState(initialDeparture || '');
+  
+  // Atualizar quando initialDeparture mudar
+  useEffect(() => {
+    if (initialDeparture) {
+      setDeparture(initialDeparture);
+    }
+  }, [initialDeparture]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
