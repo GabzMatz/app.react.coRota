@@ -41,21 +41,21 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
     setRideToCancel(null);
   };
 
-  // Filtrar apenas reservas confirmadas
-  const confirmedRides = bookedRides.filter(ride => ride.status === 'confirmed');
+  // Filtrar apenas corridas que não estejam canceladas
+  const activeRides = bookedRides.filter(ride => ride.status !== 'cancelled');
 
   return (
     <div className="min-h-screen bg-white pb-20">
       <Header />
       
-      {confirmedRides.length === 0 ? (
+      {activeRides.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <p className="text-gray-500 text-lg">Nenhuma reserva encontrada</p>
           <p className="text-gray-400 text-sm mt-2">Faça uma busca para encontrar caronas disponíveis</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {confirmedRides.map((booking) => (
+          {activeRides.map((booking) => (
             <RideCard
               key={booking.id}
               departureTime={booking.rideDetails.departureTime}

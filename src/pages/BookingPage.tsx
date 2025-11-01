@@ -30,22 +30,15 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
   };
 
   const handleConfirmBooking = async () => {
-    console.log('handleConfirmBooking chamado');
-    console.log('rideDetails:', rideDetails);
-    console.log('rideDetails.id:', rideDetails?.id);
-    
     if (!rideDetails || !rideDetails.id) {
-      console.error('ID da corrida não encontrado');
       setError('ID da corrida não encontrado');
       return;
     }
 
     // Obter ID do usuário logado
     const authUserRaw = localStorage.getItem('authUser');
-    console.log('authUserRaw:', authUserRaw);
     
     if (!authUserRaw) {
-      console.error('Usuário não autenticado');
       setError('Usuário não autenticado');
       return;
     }
@@ -53,10 +46,8 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
     try {
       const authUser = JSON.parse(authUserRaw);
       const userId = authUser.id;
-      console.log('userId:', userId);
 
       if (!userId) {
-        console.error('ID do usuário não encontrado');
         setError('ID do usuário não encontrado');
         return;
       }
@@ -64,11 +55,8 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
       setIsLoading(true);
       setError('');
 
-      console.log('Fazendo requisição PUT para:', rideDetails.id, userId);
-      
       // Fazer a requisição PUT para reservar a corrida
-      const response = await rideService.chooseRide(rideDetails.id, userId);
-      console.log('Resposta da API:', response);
+      await rideService.chooseRide(rideDetails.id, userId);
 
       // Se chegou aqui, a reserva foi bem-sucedida
       if (onConfirmBooking && searchData) {
@@ -193,19 +181,13 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
 
         {/* Botão Confirmar Reserva */}
         <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Botão clicado');
-            handleConfirmBooking();
-          }}
+          onClick={handleConfirmBooking}
           disabled={isLoading}
           className={`w-full py-4 rounded-lg font-medium transition-colors ${
             isLoading
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
-          type="button"
         >
           {isLoading ? 'Confirmando...' : 'Confirmar Reserva'}
         </button>

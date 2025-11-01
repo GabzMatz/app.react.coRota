@@ -69,22 +69,13 @@ class RideService {
   }
 
   async chooseRide(rideId: string | number, userId: string): Promise<any> {
-    console.log('rideService.chooseRide chamado');
-    console.log('rideId:', rideId);
-    console.log('userId:', userId);
-    
     const token = localStorage.getItem('authToken');
-    console.log('token encontrado:', !!token);
 
     if (!token) {
-      console.error('Token de autenticação não encontrado');
       throw new Error('Token de autenticação não encontrado');
     }
 
-    const url = `${this.baseURL}/ride/${rideId}/choose/${userId}`;
-    console.log('URL da requisição:', url);
-
-    const response = await fetch(url, {
+    const response = await fetch(`${this.baseURL}/ride/${rideId}/choose/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -92,17 +83,81 @@ class RideService {
       }
     });
 
-    console.log('Resposta recebida:', response.status, response.statusText);
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Erro na resposta:', errorData);
       throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json().catch(() => ({}));
-    console.log('Dados da resposta:', data);
-    return data;
+    return response.json().catch(() => ({}));
+  }
+
+  async getRideHistory(userId: string): Promise<any[]> {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    const response = await fetch(`${this.baseURL}/ride-history/user/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json().catch(() => []);
+  }
+
+  async cancelAsDriver(rideId: string | number, userId: string): Promise<any> {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    const response = await fetch(`${this.baseURL}/ride/${rideId}/calcel-driver/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json().catch(() => ({}));
+  }
+
+  async cancelAsPassenger(rideId: string | number, userId: string): Promise<any> {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    const response = await fetch(`${this.baseURL}/ride/${rideId}/calcel-passenger/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json().catch(() => ({}));
   }
 }
 

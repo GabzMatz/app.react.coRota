@@ -4,4 +4,5 @@ export interface BookedRide {
   searchData: { departure: string; passengers: number };
   bookingDate: string;
   status: 'confirmed' | 'cancelled';
+  role?: 'driver' | 'passenger';
 }
