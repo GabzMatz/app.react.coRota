@@ -25,6 +25,7 @@ import { userService } from './services/userService';
 import { computeEndTimeFromLeaflet } from './utils/time';
 import { useToast } from './contexts/ToastContext';
 import type { BookedRide } from './types';
+import { RideStatus } from './types';
 
 function AppContent() {
   const { showSuccess, showError } = useToast();
@@ -39,6 +40,7 @@ function AppContent() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [bookedRides, setBookedRides] = useState<BookedRide[]>([]);
   const [loadingRideHistory, setLoadingRideHistory] = useState(false);
+  const [completedRides, setCompletedRides] = useState<BookedRide[]>([]);
   // Create flow selections
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
   const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
@@ -322,6 +324,144 @@ function AppContent() {
     loadRideHistory();
   }, [activeTab, isAuthenticated]);
 
+  // Carregar as 3 últimas corridas concluídas para exibir na tela inicial
+  useEffect(() => {
+    const loadCompletedRides = async () => {
+      if ((activeTab === 'search' || currentPage === 'search') && isAuthenticated) {
+        try {
+          const userId = await getDriverId();
+          const history = await rideService.getRideHistory(userId);
+          
+          // Converter timestamp do Firestore para data
+          const convertFirestoreTimestamp = (ts: { _seconds: number; _nanoseconds: number }) => {
+            return new Date(ts._seconds * 1000 + ts._nanoseconds / 1000000);
+          };
+
+          // Formatar data
+          const formatDate = (dateObj: { _seconds: number; _nanoseconds: number } | string) => {
+            let date: Date;
+            if (typeof dateObj === 'object' && '_seconds' in dateObj) {
+              date = convertFirestoreTimestamp(dateObj);
+            } else {
+              date = new Date(dateObj as string);
+            }
+            return date.toLocaleDateString('pt-BR', { 
+              day: '2-digit', 
+              month: 'long',
+              year: 'numeric' 
+            });
+          };
+
+          // Filtrar apenas corridas concluídas
+          const completedItems = history.filter((item: any) => 
+            item.status === 'completed' || item.status === RideStatus.COMPLETED
+          );
+
+          // Buscar dados de todos os motoristas únicos primeiro
+          const uniqueDriverIds = [...new Set(completedItems.map((item: any) => item.ride.driverId).filter(Boolean))];
+          
+          const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
+            try {
+              const driverData = await userService.getUserById(driverId);
+              return { driverId, driverData };
+            } catch (error) {
+              console.error(`Erro ao buscar motorista ${driverId}:`, error);
+              return { driverId, driverData: null };
+            }
+          });
+
+          const driverDataResults = await Promise.all(driverDataPromises);
+          
+          // Criar um mapa de driverId -> driverData para acesso rápido
+          const driverMap = new Map(
+            driverDataResults
+              .filter(result => result.driverData)
+              .map(result => [result.driverId, result.driverData])
+          );
+
+          // Transformar dados da API para o formato esperado
+          const transformedRidesPromises = completedItems.map(async (item: any) => {
+            const ride = item.ride;
+            
+            // Fazer reverse geocoding para obter endereços
+            const [departureAddress, arrivalAddress] = await Promise.all([
+              reverseGeocode(ride.departureLatLng[0], ride.departureLatLng[1]),
+              reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
+            ]);
+
+            // Obter timestamp da data da corrida para ordenação
+            let sortDateTimestamp: number;
+            if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
+              sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
+            } else if (ride.date) {
+              sortDateTimestamp = new Date(ride.date as string).getTime();
+            } else {
+              const createdAt = item.createdAt;
+              if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
+                sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
+              } else {
+                sortDateTimestamp = new Date().getTime();
+              }
+            }
+
+            // Buscar dados do motorista
+            const driverData = driverMap.get(ride.driverId);
+            const driverName = driverData 
+              ? `${driverData.firstName} ${driverData.lastName}`.trim()
+              : `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`;
+
+            return {
+              id: item.id || item.rideId,
+              rideDetails: {
+                id: ride.id,
+                departureTime: ride.startTime || ride.time || '--:--',
+                arrivalTime: ride.endTime || '--:--',
+                date: formatDate(ride.date),
+                price: `R$ ${ride.pricePerPassenger.toFixed(2).replace('.', ',')}`,
+                driverName,
+                driverPhoto: null,
+                driverRating: '4.5',
+                departureLocation: 'Origem',
+                departureAddress,
+                arrivalLocation: 'Destino',
+                arrivalAddress,
+                maxPassengers: ride.allSeats,
+                availableSeats: ride.availableSeats
+              },
+              searchData: {
+                departure: departureAddress,
+                passengers: ride.allSeats - ride.availableSeats
+              },
+              bookingDate: formatDate(item.createdAt),
+              status: item.status || 'pending',
+              role: item.role as 'driver' | 'passenger',
+              sortDate: sortDateTimestamp
+            };
+          });
+
+          const transformedRides = await Promise.all(transformedRidesPromises);
+          
+          // Ordenar por data (mais recente primeiro) e pegar apenas as 3 primeiras
+          const sortedRides = transformedRides.sort((a, b) => {
+            const dateA = a.sortDate || 0;
+            const dateB = b.sortDate || 0;
+            return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+          });
+          
+          const top3Rides = sortedRides.slice(0, 3);
+          setCompletedRides(top3Rides);
+        } catch (error) {
+          console.error('Erro ao carregar corridas concluídas:', error);
+          setCompletedRides([]);
+        }
+      } else {
+        setCompletedRides([]);
+      }
+    };
+
+    loadCompletedRides();
+  }, [activeTab, currentPage, isAuthenticated]);
+
   const handleEditRide = async (rideId: string) => {
     try {
       // Buscar dados da corrida
@@ -481,7 +621,7 @@ function AppContent() {
         )
       ) : (
         <>
-          {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} />}
+          {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} completedRides={completedRides} />}
           {activeTab === 'search' && currentPage === 'search-destination' && <SearchDestinationPage onTabChange={handleTabChange} onBack={() => setCurrentPage('search')} onContinue={(rides) => { const departure = localStorage.getItem('searchDeparture'); const passengers = localStorage.getItem('searchPassengers'); setSearchData({ departure: departure || '', passengers: parseInt(passengers || '1') }); setSearchResults(rides); setCurrentPage('search-results'); }} searchData={searchData || undefined} />}
           {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage rides={searchResults} onTabChange={handleTabChange} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'ride-details' && selectedRide && <RideDetailsPage rideDetails={selectedRide} onTabChange={handleTabChange} onBack={handleBack} onPageChange={handlePageChange} />}

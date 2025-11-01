@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, Clock } from 'lucide-react';
 
 interface Ride {
-  id: number;
+  id: string | number;
   route: string;
   date: string;
 }
@@ -11,30 +11,16 @@ interface RidesHistoryProps {
   rides?: Ride[];
 }
 
-// Dados mockados das corridas sugeridas
-const defaultRides: Ride[] = [
-  {
-    id: 1,
-    route: 'Partida → Empresa - Sede 02',
-    date: 'Dia 09 de Novembro - 3 passageiros'
-  },
-  {
-    id: 2,
-    route: 'Partida → Empresa - Sede 03',
-    date: 'Dia 15 de Novembro - 4 passageiros'
-  },
-  {
-    id: 3,
-    route: 'Partida → Empresa - Sede 01',
-    date: 'Dia 20 de Novembro - 3 passageiros'
-  }
-];
-
-export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = defaultRides }) => {
-  const handleRideClick = (rideId: number) => {
+export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = [] }) => {
+  const handleRideClick = (rideId: string | number) => {
     // TODO: Implementar a lógica de navegação para a corrida selecionada
     console.log('Clicou na corrida:', rideId);
   };
+
+  // Não renderizar se não houver corridas
+  if (!rides || rides.length === 0) {
+    return null;
+  }
 
   return (
     <div className="px-4 py-6">
