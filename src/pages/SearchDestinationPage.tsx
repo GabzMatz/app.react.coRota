@@ -15,6 +15,7 @@ interface AddressResult {
 interface SearchDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onContinue?: (rides: any[]) => void;
   searchData?: { departure: string; passengers: number };
 }
@@ -22,8 +23,7 @@ interface SearchDestinationPageProps {
 export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onContinue,
-  searchData 
+  onContinue
 }) => {
   const { showError } = useToast();
   const [destination, setDestination] = useState('');

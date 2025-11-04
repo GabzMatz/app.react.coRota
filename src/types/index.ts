@@ -6,6 +6,7 @@ export enum RideStatus {
 
 export interface BookedRide {
   id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rideDetails: any;
   searchData: { departure: string; passengers: number };
   bookingDate: string;

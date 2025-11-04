@@ -90,6 +90,8 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
   };
 
   // Função para criar usuário na API
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const createUser = async (completeData: any, createdAddress: any, selectedCompany: Company | null) => {
     try {
       console.log('👤 Criando usuário na API...');
@@ -99,7 +101,7 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
 
       // Separar nome completo em primeiro e último nome
       const fullName = completeData.nomeCompleto || '';
-      const nameParts = fullName.split(' ').filter(part => part.trim() !== '');
+      const nameParts = fullName.split(' ').filter((part: string) => part.trim() !== '');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName; // Se não há sobrenome, usa o primeiro nome
 

@@ -3,7 +3,7 @@ import { BottomNav } from '../components/BottomNav';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
-import { LogOut, User, Mail, Phone, CreditCard } from 'lucide-react';
+import { LogOut, Mail, Phone, CreditCard } from 'lucide-react';
 
 interface ProfilePageProps {
   onTabChange?: (tab: string) => void;
@@ -11,6 +11,8 @@ interface ProfilePageProps {
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout }) => {
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
