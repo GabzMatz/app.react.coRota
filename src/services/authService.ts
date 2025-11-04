@@ -15,7 +15,7 @@ export interface AuthError {
 }
 
 class AuthService {
-  private baseURL = 'http://localhost:3000';
+  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
 
   // Salvar token no localStorage
   setToken(token: string): void {

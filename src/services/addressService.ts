@@ -38,7 +38,7 @@ export interface AddressError {
 }
 
 class AddressService {
-  private baseURL = 'http://localhost:3000';
+  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
 
   // Criar novo endereço
   async createAddress(addressData: AddressCreateRequest): Promise<AddressCreateResponse> {

@@ -24,7 +24,7 @@ export interface CompanyError {
 }
 
 class CompanyService {
-  private baseURL = 'http://localhost:3000';
+  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
 
   // Buscar empresas por nome
   async searchCompanies(searchTerm: string): Promise<Company[]> {
