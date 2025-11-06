@@ -25,15 +25,20 @@ export interface CompanyError {
 
 class CompanyService {
   private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    };
+  }
 
-  // Buscar empresas por nome
   async searchCompanies(searchTerm: string): Promise<Company[]> {
     try {
       if (!searchTerm.trim()) {
         return [];
       }
-
-      console.log('🔍 Buscando empresas com termo:', searchTerm);
 
       const response = await fetch(`${this.baseURL}/companies/search`, {
         method: 'POST',
@@ -43,20 +48,38 @@ class CompanyService {
         body: JSON.stringify({ name: searchTerm }),
       });
 
-      console.log('📡 Resposta da API:', response.status, response.statusText);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Erro na API:', errorData);
         throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const data: CompanySearchResponse = await response.json();
-      console.log('✅ Empresas encontradas:', data.data);
       
       return data.data || [];
     } catch (error) {
-      console.error('❌ Erro ao buscar empresas:', error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+    }
+  }
+
+  async getCompanyById(companyId: string): Promise<Company> {
+    try {
+      const response = await fetch(`${this.baseURL}/companies/${companyId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+      }
+
+      const data: Company = await response.json();
+      
+      return data;
+    } catch (error) {
       if (error instanceof Error) {
         throw new Error(error.message);
       }
