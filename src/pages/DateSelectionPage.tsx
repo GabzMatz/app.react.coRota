@@ -87,9 +87,11 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
   const calendarDays = generateCalendarDays(currentMonth.getFullYear(), currentMonth.getMonth());
 
   const handleContinue = () => {
-    if (selectedDate) {
-      onDateSelected?.(selectedDate);
+    if (!selectedDate) {
+      return;
     }
+
+    onDateSelected?.(selectedDate);
   };
 
   return (
@@ -190,10 +192,11 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
       </div>
 
       <div className="relative">
-        {isEditing && selectedDate && (
+        {isEditing && (
           <button
             onClick={handleContinue}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-blue-600 text-white py-4 rounded-lg font-medium shadow-lg hover:bg-blue-700 transition-colors"
+            disabled={!selectedDate}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-blue-600 text-white py-4 rounded-lg font-medium shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </button>

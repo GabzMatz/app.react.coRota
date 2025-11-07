@@ -30,7 +30,13 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     onTabChange?.(tab);
   };
 
+  const isContinueDisabled = !tripData || !tripData.departure || !tripData.destination;
+
   const handleContinue = () => {
+    if (isContinueDisabled) {
+      return;
+    }
+
     console.log('Continuar com rota:', routeData);
     onNavigateToDateSelection?.();
   };
@@ -275,7 +281,8 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          disabled={isContinueDisabled}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar
         </button>

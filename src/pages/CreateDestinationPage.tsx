@@ -43,6 +43,8 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
     saveDestinationCoordinates(address);
   };
 
+  const isContinueDisabled = loadingCompanyAddress || !destination.trim();
+
   const handleCompanyAddressToggle = async (checked: boolean) => {
     setUseCompanyAddress(checked);
     
@@ -98,6 +100,10 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
   };
 
   const handleContinue = () => {
+    if (isContinueDisabled) {
+      return;
+    }
+
     const departureData = localStorage.getItem('selectedAddress');
     const destinationData = localStorage.getItem('selectedDestination');
     
@@ -185,7 +191,8 @@ export const CreateDestinationPage: React.FC<CreateDestinationPageProps> = ({ on
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          disabled={isContinueDisabled}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar
         </button>

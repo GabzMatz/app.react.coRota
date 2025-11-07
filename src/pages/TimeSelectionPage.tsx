@@ -31,10 +31,14 @@ export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({
     setSelectedTime(time);
   };
 
+  const isContinueDisabled = !selectedTime;
+
   const handleContinue = () => {
-    if (selectedTime) {
-      onTimeSelected?.(selectedTime);
+    if (isContinueDisabled) {
+      return;
     }
+
+    onTimeSelected?.(selectedTime);
   };
 
   return (
@@ -74,7 +78,8 @@ export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          disabled={isContinueDisabled}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar
         </button>

@@ -28,6 +28,8 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
     onTabChange?.(tab);
   };
 
+  const isContinueDisabled = !departure.trim();
+
   const handleAddressSelect = (address: AddressResult) => {
     saveCoordinates(address); // Salva as coordenadas automaticamente
     console.log('Endereço selecionado e coordenadas salvas:', address);
@@ -53,6 +55,10 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
   };
 
   const handleContinue = () => {
+    if (isContinueDisabled) {
+      return;
+    }
+
     onStepChange?.('destination');
   };
 
@@ -75,11 +81,12 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
         </div>
       </div>
 
-      {isEditing && departure && (
+      {isEditing && (
         <div className="px-6 mb-4">
           <button
             onClick={handleContinue}
-            className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isContinueDisabled}
+            className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </button>
