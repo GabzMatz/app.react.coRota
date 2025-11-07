@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { RidesList } from './pages/RidesList';
 import { SearchPage } from './pages/SearchPage';
