@@ -221,12 +221,26 @@ function AppContent() {
         } else {
           date = new Date(dateObj as string);
         }
-        return date.toLocaleDateString('pt-BR', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric' 
-        });
+        return formattedDate(date);
       };
+
+      const formattedDate = (date: string | Date) => {
+        let newDate: Date;
+
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          // Cria a data manualmente para evitar a conversão de timezone
+          const [year, month, day] = date.split('-').map(Number);
+          newDate = new Date(year, month - 1, day);
+        } else {
+          newDate = new Date(date);
+        }
+
+        return newDate.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
 
       // Formatar preço
       const formatPrice = (price: number) => {
@@ -297,7 +311,7 @@ function AppContent() {
             id: ride.id,
             departureTime,
             arrivalTime,
-            date: formatDate(ride.date),
+            date: formattedDate(ride.date),
             price: formatPrice(ride.pricePerPassenger),
             driverName,
             driverPhoto: null,
