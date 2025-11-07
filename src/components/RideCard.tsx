@@ -46,6 +46,8 @@ export const RideCard: React.FC<RideCardProps> = ({
         return { color: 'text-green-500', dotColor: 'bg-green-500', label: 'Concluída' };
       case RideStatus.CANCELED:
         return { color: 'text-red-500', dotColor: 'bg-red-500', label: 'Cancelada' };
+      case 'cancelled':
+        return { color: 'text-red-500', dotColor: 'bg-red-500', label: 'Cancelada' };
       case RideStatus.PENDING:
         return { color: 'text-yellow-500', dotColor: 'bg-yellow-500', label: 'Pendente' };
       default:
@@ -53,7 +55,9 @@ export const RideCard: React.FC<RideCardProps> = ({
     }
   };
 
-  const statusConfig = getStatusConfig(status);
+  const normalizedStatus = status?.toLowerCase();
+  const statusConfig = getStatusConfig(normalizedStatus);
+  const isPending = normalizedStatus === RideStatus.PENDING;
   
   return (
     <Card className="mx-4 p-1">
@@ -107,22 +111,24 @@ export const RideCard: React.FC<RideCardProps> = ({
           </div>
           
           {/* Botões de ação */}
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={onCancel}
-              className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
-            >
-              <X size={18}/>
-            </button>
-            {role === 'driver' && (
+          {isPending && (
+            <div className="flex items-center justify-center gap-2">
               <button
-                onClick={onEdit}
+                onClick={onCancel}
                 className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
               >
-                <Edit size={18} />
+                <X size={18}/>
               </button>
-            )}
-          </div>
+              {role === 'driver' && (
+                <button
+                  onClick={onEdit}
+                  className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
+                >
+                  <Edit size={18} />
+                </button>
+              )}
+            </div>
+          )}
         </div>       
       </CardContent>
     </Card>

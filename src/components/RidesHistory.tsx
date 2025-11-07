@@ -9,13 +9,23 @@ interface Ride {
 
 interface RidesHistoryProps {
   rides?: Ride[];
+  isLoading?: boolean;
 }
 
-export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = [] }) => {
+export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = [], isLoading = false }) => {
   const handleRideClick = (rideId: string | number) => {
     // TODO: Implementar a lógica de navegação para a corrida selecionada
     console.log('Clicou na corrida:', rideId);
   };
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-8 flex flex-col items-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-gray-600 text-sm">Carregando suas últimas corridas...</p>
+      </div>
+    );
+  }
 
   // Não renderizar se não houver corridas
   if (!rides || rides.length === 0) {

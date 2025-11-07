@@ -32,10 +32,6 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
     onTabChange?.(tab);
   };
 
-  const handleContact = () => {
-    console.log('Contactar motorista:', rideDetails.driverName);
-  };
-
   const handleContinue = () => {
     console.log('Continuar com a carona');
     onPageChange?.('booking');
@@ -189,13 +185,10 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
            </div>
          </div>
 
-         {/* Botão de Contato */}
-         <button 
-           onClick={handleContact}
-           className="w-full text-blue-600 font-medium py-1 mb-3 hover:text-blue-700 transition-colors"
-         >
+         {/* Texto de Contato (funcionalidade futura) */}
+         <div className="w-full text-blue-600 font-medium py-1 mb-3">
            Contactar {rideDetails.driverName}
-         </button>
+         </div>
 
          {/* Informação de Passageiros */}
          <div className="flex items-center text-gray-600 mb-4">

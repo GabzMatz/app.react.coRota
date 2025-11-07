@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RidesList } from './pages/RidesList';
 import { SearchPage } from './pages/SearchPage';
 import { SearchDestinationPage } from './pages/SearchDestinationPage';
@@ -41,6 +41,7 @@ function AppContent() {
   const [bookedRides, setBookedRides] = useState<BookedRide[]>([]);
   const [loadingRideHistory, setLoadingRideHistory] = useState(false);
   const [completedRides, setCompletedRides] = useState<BookedRide[]>([]);
+  const [loadingCompletedRides, setLoadingCompletedRides] = useState(false);
   // Create flow selections
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
   const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
@@ -51,13 +52,30 @@ function AppContent() {
   const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
   // price is passed directly to handler; no need to store separately
 
+  const resetCreateFlow = useCallback(() => {
+    setCreateStep('departure');
+    setCreateDate(null);
+    setCreateTime(null);
+    setCreateSeats(null);
+    setEditingRideId(null);
+    setEditInitialDeparture('');
+    setEditInitialDestination('');
+    setEditInitialPrice(null);
+    localStorage.removeItem('selectedAddress');
+    localStorage.removeItem('selectedDestination');
+  }, []);
+
   const handleTabChange = (tab: string) => {
+    if (tab === 'messages') {
+      return;
+    }
+
     setActiveTab(tab);
     if (tab === 'search') {
       setCurrentPage('search');
     } else if (tab === 'create') {
+      resetCreateFlow();
       setCurrentPage('create');
-      setCreateStep('departure'); // Sempre começar com a tela de partida
     }
   };
 
@@ -120,36 +138,7 @@ function AppContent() {
     setCurrentPage('search');
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    try {
-      // Encontrar a corrida para obter a role e o rideId
-      const booking = bookedRides.find(b => b.id === bookingId);
-      if (!booking) {
-        console.error('Corrida não encontrada');
-        return;
-      }
-
-      // Obter ID do usuário logado
-      const userId = await getDriverId();
-
-      // Chamar a API apropriada baseado na role
-      if (booking.role === 'driver') {
-        // Se for motorista, cancelar como motorista (remove a corrida)
-        await rideService.cancelAsDriver(booking.rideDetails.id, userId);
-        // Remover da lista
-        setBookedRides(prev => prev.filter(b => b.id !== bookingId));
-      } else if (booking.role === 'passenger') {
-        // Se for passageiro, cancelar como passageiro (remove apenas ele da corrida)
-        await rideService.cancelAsPassenger(booking.rideDetails.id, userId);
-        // Remover da lista
-        setBookedRides(prev => prev.filter(b => b.id !== bookingId));
-      }
-    } catch (error) {
-      console.error('Erro ao cancelar corrida:', error);
-    }
-  };
-
-  const getDriverId = async (): Promise<string> => {
+  const getDriverId = useCallback(async (): Promise<string> => {
     const userRaw = localStorage.getItem('authUser');
     const cached = userRaw ? JSON.parse(userRaw) : null;
     if (cached?.id) return cached.id as string;
@@ -157,10 +146,10 @@ function AppContent() {
     const me = await userService.getMe();
     localStorage.setItem('authUser', JSON.stringify({ id: me.id, email: me.email }));
     return me.id;
-  };
+  }, []);
 
   // Função auxiliar para fazer reverse geocoding usando Photon
-  const reverseGeocode = async (lat: number, lon: number): Promise<string> => {
+  const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     try {
       const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
       if (!response.ok) {
@@ -185,150 +174,179 @@ function AppContent() {
       console.error('Erro no reverse geocoding:', error);
       return 'Endereço não disponível';
     }
+  }, []);
+
+  const fetchRideHistory = useCallback(async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    try {
+      setLoadingRideHistory(true);
+      const userId = await getDriverId();
+      const history = await rideService.getRideHistory(userId);
+
+      // Converter timestamp do Firestore para data
+      const convertFirestoreTimestamp = (ts: { _seconds: number; _nanoseconds: number }) => {
+        return new Date(ts._seconds * 1000 + ts._nanoseconds / 1000000);
+      };
+
+      // Formatar data
+      const formatDate = (dateObj: { _seconds: number; _nanoseconds: number } | string) => {
+        let date: Date;
+        if (typeof dateObj === 'object' && '_seconds' in dateObj) {
+          date = convertFirestoreTimestamp(dateObj);
+        } else {
+          date = new Date(dateObj as string);
+        }
+        return date.toLocaleDateString('pt-BR', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        });
+      };
+
+      // Formatar preço
+      const formatPrice = (price: number) => {
+        return `R$ ${price.toFixed(2).replace('.', ',')}`;
+      };
+
+      // Buscar dados de todos os motoristas únicos primeiro
+      const uniqueDriverIds = [...new Set(history.map((item: any) => item.ride.driverId).filter(Boolean))];
+      
+      const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
+        try {
+          const driverData = await userService.getUserById(driverId);
+          return { driverId, driverData };
+        } catch (error) {
+          console.error(`Erro ao buscar motorista ${driverId}:`, error);
+          return { driverId, driverData: null };
+        }
+      });
+
+      const driverDataResults = await Promise.all(driverDataPromises);
+      
+      // Criar um mapa de driverId -> driverData para acesso rápido
+      const driverMap = new Map(
+        driverDataResults
+          .filter(result => result.driverData)
+          .map(result => [result.driverId, result.driverData])
+      );
+
+      // Transformar dados da API para o formato esperado
+      const transformedRidesPromises = history.map(async (item: any) => {
+        const ride = item.ride;
+        
+        // Usar startTime e endTime se disponíveis, senão usar time
+        const departureTime = ride.startTime || ride.time || '--:--';
+        const arrivalTime = ride.endTime || '--:--';
+
+        // Fazer reverse geocoding para obter endereços
+        const [departureAddress, arrivalAddress] = await Promise.all([
+          reverseGeocode(ride.departureLatLng[0], ride.departureLatLng[1]),
+          reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
+        ]);
+
+        // Obter timestamp da data da corrida para ordenação
+        let sortDateTimestamp: number;
+        if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
+          sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
+        } else if (ride.date) {
+          sortDateTimestamp = new Date(ride.date as string).getTime();
+        } else {
+          // Fallback para data de criação se não houver data da corrida
+          const createdAt = item.createdAt;
+          if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
+            sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
+          } else {
+            sortDateTimestamp = new Date().getTime();
+          }
+        }
+
+        // Buscar dados do motorista
+        const driverData = driverMap.get(ride.driverId);
+        const driverName = driverData 
+          ? `${driverData.firstName} ${driverData.lastName}`.trim()
+          : `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`;
+
+        return {
+          id: item.id || item.rideId,
+          rideDetails: {
+            id: ride.id,
+            departureTime,
+            arrivalTime,
+            date: formatDate(ride.date),
+            price: formatPrice(ride.pricePerPassenger),
+            driverName,
+            driverPhoto: null,
+            driverRating: '4.5',
+            departureLocation: 'Origem',
+            departureAddress,
+            arrivalLocation: 'Destino',
+            arrivalAddress,
+            maxPassengers: ride.allSeats,
+            availableSeats: ride.availableSeats
+          },
+          searchData: {
+            departure: 'Origem',
+            passengers: ride.allSeats - ride.availableSeats
+          },
+          bookingDate: formatDate(item.createdAt),
+          status: item.status || 'pending',
+          role: item.role as 'driver' | 'passenger',
+          sortDate: sortDateTimestamp
+        };
+      });
+
+      const transformedRides = await Promise.all(transformedRidesPromises);
+      setBookedRides(transformedRides);
+    } catch (error) {
+      console.error('Erro ao carregar histórico de corridas:', error);
+    } finally {
+      setLoadingRideHistory(false);
+    }
+  }, [getDriverId, isAuthenticated, reverseGeocode]);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    try {
+      // Encontrar a corrida para obter a role e o rideId
+      const booking = bookedRides.find(b => b.id === bookingId);
+      if (!booking) {
+        console.error('Corrida não encontrada');
+        return;
+      }
+
+      // Obter ID do usuário logado
+      const userId = await getDriverId();
+
+      // Chamar a API apropriada baseado na role
+      if (booking.role === 'driver') {
+        await rideService.cancelAsDriver(booking.rideDetails.id, userId);
+      } else if (booking.role === 'passenger') {
+        await rideService.cancelAsPassenger(booking.rideDetails.id, userId);
+      }
+
+      await fetchRideHistory();
+    } catch (error) {
+      console.error('Erro ao cancelar corrida:', error);
+    }
   };
 
   // Carregar histórico de corridas quando a aba "routes" for ativada
   useEffect(() => {
-    const loadRideHistory = async () => {
-      if (activeTab === 'routes' && isAuthenticated) {
-        try {
-          setLoadingRideHistory(true);
-          const userId = await getDriverId();
-          const history = await rideService.getRideHistory(userId);
-          
-          // Converter timestamp do Firestore para data
-          const convertFirestoreTimestamp = (ts: { _seconds: number; _nanoseconds: number }) => {
-            return new Date(ts._seconds * 1000 + ts._nanoseconds / 1000000);
-          };
-
-          // Formatar data
-          const formatDate = (dateObj: { _seconds: number; _nanoseconds: number } | string) => {
-            let date: Date;
-            if (typeof dateObj === 'object' && '_seconds' in dateObj) {
-              date = convertFirestoreTimestamp(dateObj);
-            } else {
-              date = new Date(dateObj as string);
-            }
-            return date.toLocaleDateString('pt-BR', { 
-              day: '2-digit', 
-              month: '2-digit', 
-              year: 'numeric' 
-            });
-          };
-
-          // Formatar preço
-          const formatPrice = (price: number) => {
-            return `R$ ${price.toFixed(2).replace('.', ',')}`;
-          };
-
-          // Buscar dados de todos os motoristas únicos primeiro
-          const uniqueDriverIds = [...new Set(history.map((item: any) => item.ride.driverId).filter(Boolean))];
-          
-          const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
-            try {
-              const driverData = await userService.getUserById(driverId);
-              return { driverId, driverData };
-            } catch (error) {
-              console.error(`Erro ao buscar motorista ${driverId}:`, error);
-              return { driverId, driverData: null };
-            }
-          });
-
-          const driverDataResults = await Promise.all(driverDataPromises);
-          
-          // Criar um mapa de driverId -> driverData para acesso rápido
-          const driverMap = new Map(
-            driverDataResults
-              .filter(result => result.driverData)
-              .map(result => [result.driverId, result.driverData])
-          );
-
-          // Transformar dados da API para o formato esperado
-          const transformedRidesPromises = history.map(async (item: any) => {
-            const ride = item.ride;
-            
-            // Usar startTime e endTime se disponíveis, senão usar time
-            const departureTime = ride.startTime || ride.time || '--:--';
-            const arrivalTime = ride.endTime || '--:--';
-
-            // Fazer reverse geocoding para obter endereços
-            const [departureAddress, arrivalAddress] = await Promise.all([
-              reverseGeocode(ride.departureLatLng[0], ride.departureLatLng[1]),
-              reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
-            ]);
-
-            // Obter timestamp da data da corrida para ordenação
-            let sortDateTimestamp: number;
-            if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
-              sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
-            } else if (ride.date) {
-              sortDateTimestamp = new Date(ride.date as string).getTime();
-            } else {
-              // Fallback para data de criação se não houver data da corrida
-              const createdAt = item.createdAt;
-              if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
-                sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
-              } else {
-                sortDateTimestamp = new Date().getTime();
-              }
-            }
-
-            // Buscar dados do motorista
-            const driverData = driverMap.get(ride.driverId);
-            const driverName = driverData 
-              ? `${driverData.firstName} ${driverData.lastName}`.trim()
-              : `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`;
-
-            return {
-              id: item.id || item.rideId,
-              rideDetails: {
-                id: ride.id,
-                departureTime,
-                arrivalTime,
-                date: formatDate(ride.date),
-                price: formatPrice(ride.pricePerPassenger),
-                driverName,
-                driverPhoto: null,
-                driverRating: '4.5',
-                departureLocation: 'Origem',
-                departureAddress,
-                arrivalLocation: 'Destino',
-                arrivalAddress,
-                maxPassengers: ride.allSeats,
-                availableSeats: ride.availableSeats
-              },
-              searchData: {
-                departure: 'Origem',
-                passengers: ride.allSeats - ride.availableSeats
-              },
-              bookingDate: formatDate(item.createdAt),
-              status: item.status || 'pending',
-              role: item.role as 'driver' | 'passenger',
-              sortDate: sortDateTimestamp
-            };
-          });
-
-          const transformedRides = await Promise.all(transformedRidesPromises);
-          setBookedRides(transformedRides);
-        } catch (error) {
-          console.error('Erro ao carregar histórico de corridas:', error);
-        } finally {
-          setLoadingRideHistory(false);
-        }
-      } else {
-        // Resetar loading se não estiver na aba routes
-        setLoadingRideHistory(false);
-      }
-    };
-
-    loadRideHistory();
-  }, [activeTab, isAuthenticated]);
+    if (activeTab === 'routes') {
+      fetchRideHistory();
+    } else {
+      setLoadingRideHistory(false);
+    }
+  }, [activeTab, fetchRideHistory]);
 
   // Carregar as 3 últimas corridas concluídas para exibir na tela inicial
   useEffect(() => {
     const loadCompletedRides = async () => {
       if ((activeTab === 'search' || currentPage === 'search') && isAuthenticated) {
         try {
+          setLoadingCompletedRides(true);
           const userId = await getDriverId();
           const history = await rideService.getRideHistory(userId);
           
@@ -453,14 +471,17 @@ function AppContent() {
         } catch (error) {
           console.error('Erro ao carregar corridas concluídas:', error);
           setCompletedRides([]);
+        } finally {
+          setLoadingCompletedRides(false);
         }
       } else {
         setCompletedRides([]);
+        setLoadingCompletedRides(false);
       }
     };
 
     loadCompletedRides();
-  }, [activeTab, currentPage, isAuthenticated]);
+  }, [activeTab, currentPage, isAuthenticated, getDriverId, reverseGeocode]);
 
   const handleEditRide = async (rideId: string) => {
     try {
@@ -561,14 +582,7 @@ function AppContent() {
       }
 
       // Reset create flow
-      setCreateStep('departure');
-      setCreateDate(null);
-      setCreateTime(null);
-      setCreateSeats(null);
-      setEditingRideId(null);
-      setEditInitialDeparture('');
-      setEditInitialDestination('');
-      setEditInitialPrice(null);
+      resetCreateFlow();
       setActiveTab('routes');
       setCurrentPage('search');
     } catch (e) {
@@ -621,15 +635,15 @@ function AppContent() {
         )
       ) : (
         <>
-          {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} completedRides={completedRides} />}
+          {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} completedRides={completedRides} isLoadingRecentRides={loadingCompletedRides} />}
           {activeTab === 'search' && currentPage === 'search-destination' && <SearchDestinationPage onTabChange={handleTabChange} onBack={() => setCurrentPage('search')} onContinue={(rides) => { const departure = localStorage.getItem('searchDeparture'); const passengers = localStorage.getItem('searchPassengers'); setSearchData({ departure: departure || '', passengers: parseInt(passengers || '1') }); setSearchResults(rides); setCurrentPage('search-results'); }} searchData={searchData || undefined} />}
           {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage rides={searchResults} onTabChange={handleTabChange} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'ride-details' && selectedRide && <RideDetailsPage rideDetails={selectedRide} onTabChange={handleTabChange} onBack={handleBack} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'booking' && selectedRide && <BookingPage rideDetails={selectedRide} searchData={searchData || undefined} onTabChange={handleTabChange} onBack={handleBack} onConfirmBooking={handleConfirmBooking} />}
-          {activeTab === 'create' && createStep === 'departure' && <CreatePage onTabChange={handleTabChange} onStepChange={handleCreateStepChange} initialDeparture={editInitialDeparture} />}
+          {activeTab === 'create' && createStep === 'departure' && <CreatePage onTabChange={handleTabChange} onStepChange={handleCreateStepChange} initialDeparture={editInitialDeparture} isEditing={Boolean(editingRideId)} />}
           {activeTab === 'create' && createStep === 'destination' && <CreateDestinationPage onTabChange={handleTabChange} onBack={handleCreateBack} onStepChange={handleCreateStepChange} initialDestination={editInitialDestination} />}
           {activeTab === 'create' && createStep === 'route' && <RouteSelectedPage onTabChange={handleTabChange} onBack={handleCreateBack} onNavigateToDateSelection={() => setCreateStep('date')} />}
-          {activeTab === 'create' && createStep === 'date' && <DateSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onDateSelected={(d) => { const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); setCreateDate(`${yyyy}-${mm}-${dd}`); setCreateStep('time'); }} initialDate={createDate || undefined} />}
+          {activeTab === 'create' && createStep === 'date' && <DateSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onDateSelected={(d) => { const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); setCreateDate(`${yyyy}-${mm}-${dd}`); setCreateStep('time'); }} initialDate={createDate || undefined} isEditing={Boolean(editingRideId)} />}
           {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} initialTime={createTime || undefined} />}
           {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} initialCount={createSeats || undefined} />}
           {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} initialPrice={editInitialPrice || undefined} />}

@@ -13,16 +13,15 @@ interface CreatePageProps {
   onTabChange?: (tab: string) => void;
   onStepChange?: (step: 'departure' | 'destination') => void;
   initialDeparture?: string;
+  isEditing?: boolean;
 }
 
-export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChange, initialDeparture }) => {
+export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChange, initialDeparture, isEditing = false }) => {
   const [departure, setDeparture] = useState(initialDeparture || '');
   
   // Atualizar quando initialDeparture mudar
   useEffect(() => {
-    if (initialDeparture) {
-      setDeparture(initialDeparture);
-    }
+    setDeparture(initialDeparture || '');
   }, [initialDeparture]);
 
   const handleTabChange = (tab: string) => {
@@ -53,10 +52,13 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
     console.log('Coordenadas salvas:', coordinates);
   };
 
+  const handleContinue = () => {
+    onStepChange?.('destination');
+  };
+
   return (
-    <div className="min-h-screen bg-white pb-20">
-      
-      <div className="px-6 py-8">
+    <div className="min-h-screen bg-white pb-20 flex flex-col">
+      <div className="px-6 py-8 flex-1">
         {/* Título */}
         <h1 className="text-2xl font-bold text-gray-900 mb-8">
           De onde você vai sair?
@@ -72,6 +74,17 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
           />
         </div>
       </div>
+
+      {isEditing && departure && (
+        <div className="px-6 mb-4">
+          <button
+            onClick={handleContinue}
+            className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Continuar
+          </button>
+        </div>
+      )}
 
       <BottomNav 
         activeTab="create"

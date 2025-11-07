@@ -7,13 +7,15 @@ interface DateSelectionPageProps {
   onBack?: () => void;
   onDateSelected?: (date: Date) => void;
   initialDate?: string; // YYYY-MM-DD
+  isEditing?: boolean;
 }
 
 export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
   onDateSelected,
-  initialDate
+  initialDate,
+  isEditing = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     initialDate ? new Date(initialDate) : null
@@ -24,6 +26,8 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
     if (initialDate) {
       const date = new Date(initialDate);
       setSelectedDate(date);
+    } else {
+      setSelectedDate(null);
     }
   }, [initialDate]);
 
@@ -82,8 +86,14 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
 
   const calendarDays = generateCalendarDays(currentMonth.getFullYear(), currentMonth.getMonth());
 
+  const handleContinue = () => {
+    if (selectedDate) {
+      onDateSelected?.(selectedDate);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="min-h-screen bg-white pb-20 flex flex-col">
       {/* Header com botão voltar */}
       <div className="flex items-center p-3">
         <button 
@@ -96,7 +106,7 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
       </div>
 
       {/* Calendário */}
-      <div className="px-6 py-4">
+      <div className="px-6 py-4 flex-1 overflow-y-auto">
         {/* Dias da semana */}
         <div className="grid grid-cols-7 gap-1 mb-4">
           {dayNames.map((day, index) => (
@@ -179,11 +189,21 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
         </div>
       </div>
 
+      <div className="relative">
+        {isEditing && selectedDate && (
+          <button
+            onClick={handleContinue}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-blue-600 text-white py-4 rounded-lg font-medium shadow-lg hover:bg-blue-700 transition-colors"
+          >
+            Continuar
+          </button>
+        )}
 
-      <BottomNav 
-        activeTab="create"
-        onTabChange={handleTabChange}
-      />
+        <BottomNav 
+          activeTab="create"
+          onTabChange={handleTabChange}
+        />
+      </div>
     </div>
   );
 };

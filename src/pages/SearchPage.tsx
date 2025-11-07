@@ -8,9 +8,10 @@ interface SearchPageProps {
   onTabChange?: (tab: string) => void;
   onPageChange?: (page: string, data?: any) => void;
   completedRides?: BookedRide[];
+  isLoadingRecentRides?: boolean;
 }
 
-export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChange, completedRides = [] }) => {
+export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChange, completedRides = [], isLoadingRecentRides = false }) => {
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
@@ -50,7 +51,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChang
         <SearchSection onSearch={handleSearch} />
       </div>
       <div className="pt-16">
-        <RidesHistory rides={formattedRides} />
+        <RidesHistory rides={formattedRides} isLoading={isLoadingRecentRides} />
       </div>
       
       <BottomNav 

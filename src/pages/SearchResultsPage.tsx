@@ -291,7 +291,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
   };
 
   // Usar dados das corridas com informações dos motoristas
-  const displayRides = ridesWithDriverData.length > 0 ? ridesWithDriverData : rides;
+  // Só exibir os cards quando não estiver carregando e tiver dados dos motoristas
+  const displayRides = loadingDrivers ? [] : (ridesWithDriverData.length > 0 ? ridesWithDriverData : rides);
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -303,7 +304,12 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
           </p>
         </div>
         
-        {displayRides.length === 0 ? (
+        {loadingDrivers ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-600 text-base">Carregando informações dos motoristas...</p>
+          </div>
+        ) : displayRides.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">Nenhuma carona encontrada</p>
             <p className="text-gray-400 text-sm mt-2">Tente ajustar sua busca</p>

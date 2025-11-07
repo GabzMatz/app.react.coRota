@@ -3,7 +3,7 @@ import { BottomNav } from '../components/BottomNav';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
-import { LogOut, User, Mail, Phone, CreditCard } from 'lucide-react';
+import { LogOut, Mail, Phone, CreditCard } from 'lucide-react';
 
 interface ProfilePageProps {
   onTabChange?: (tab: string) => void;
@@ -73,10 +73,41 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
-  // Função para formatar telefone
+  // Função para formatar telefone (suporta código do país e diferentes comprimentos)
   const formatPhone = (phone: string) => {
     if (!phone) return '';
-    return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+
+    // Remover qualquer caractere não numérico
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 0) return phone;
+
+    let countryCode = '';
+    let number = digits;
+
+    // Se tiver mais de 11 dígitos, considerar os extras como código do país
+    if (digits.length > 11) {
+      const excess = digits.length - 11;
+      countryCode = digits.slice(0, excess);
+      number = digits.slice(excess);
+    }
+
+    // Tratar telefones fixos (10 dígitos) e celulares (11 dígitos)
+    if (number.length === 10) {
+      const area = number.slice(0, 2);
+      const part1 = number.slice(2, 6);
+      const part2 = number.slice(6);
+      return `${countryCode ? `+${countryCode} ` : ''}(${area}) ${part1}-${part2}`;
+    }
+
+    if (number.length === 11) {
+      const area = number.slice(0, 2);
+      const part1 = number.slice(2, 7);
+      const part2 = number.slice(7);
+      return `${countryCode ? `+${countryCode} ` : ''}(${area}) ${part1}-${part2}`;
+    }
+
+    // Fallback para outros formatos
+    return countryCode ? `+${countryCode} ${number}` : number;
   };
 
   // Obter foto do usuário ou usar inicial
