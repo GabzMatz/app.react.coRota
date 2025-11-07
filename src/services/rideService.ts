@@ -26,7 +26,7 @@ export interface SuggestRidesResponse {
 }
 
 class RideService {
-  private baseURL = 'http://localhost:3000';
+  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
 
   async createRide(payload: CreateRideRequest): Promise<CreateRideResponse> {
     const token = localStorage.getItem('authToken');

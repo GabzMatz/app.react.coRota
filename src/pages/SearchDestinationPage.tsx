@@ -4,6 +4,9 @@ import { SearchInput } from '../components/SearchInput';
 import { BottomNav } from '../components/BottomNav';
 import { rideService } from '../services/rideService';
 import { useToast } from '../contexts/ToastContext';
+import { companyService } from '../services/companyService';
+import { addressService } from '../services/addressService';
+import { userService } from '../services/userService';
 
 interface AddressResult {
   display_name: string;
@@ -15,6 +18,7 @@ interface AddressResult {
 interface SearchDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onContinue?: (rides: any[]) => void;
   searchData?: { departure: string; passengers: number };
 }
@@ -22,13 +26,13 @@ interface SearchDestinationPageProps {
 export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onContinue,
-  searchData 
+  onContinue
 }) => {
   const { showError } = useToast();
   const [destination, setDestination] = useState('');
   const [useCompanyAddress, setUseCompanyAddress] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingCompanyAddress, setLoadingCompanyAddress] = useState(false);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
@@ -36,28 +40,63 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
 
   const handleAddressSelect = (address: AddressResult) => {
     saveDestinationCoordinates(address);
-    console.log('Destino selecionado e coordenadas salvas:', address);
   };
 
-  const handleCompanyAddressToggle = (checked: boolean) => {
+  const handleCompanyAddressToggle = async (checked: boolean) => {
     setUseCompanyAddress(checked);
     
     if (checked) {
-      // Salvar endereço da empresa como destino
-      const companyAddress = {
-        latitude: -23.5505, // Exemplo: coordenadas de São Paulo
-        longitude: -46.6333,
-        address: "Endereço da Empresa",
-        placeId: "company_address"
-      };
-      
-      localStorage.setItem('selectedDestination', JSON.stringify(companyAddress));
-      console.log('Endereço da empresa selecionado:', companyAddress);
+      try {
+        setLoadingCompanyAddress(true);
+        
+        const authUserRaw = localStorage.getItem('authUser');
+        if (!authUserRaw) {
+          throw new Error('Usuário não autenticado');
+        }
+        
+        const authUser = JSON.parse(authUserRaw);
+        if (!authUser.id) {
+          throw new Error('ID do usuário não encontrado');
+        }
+        
+        const user = await userService.getUserById(authUser.id);
+        if (!user.companyId) {
+          throw new Error('Empresa não encontrada no perfil do usuário');
+        }
+        
+        const company = await companyService.getCompanyById(user.companyId);
+        
+        if (!company.addressId) {
+          throw new Error('Endereço da empresa não encontrado');
+        }
+        
+        const address = await addressService.getAddressById(company.addressId);
+        
+        const fullAddress = `${address.street}, ${address.number}${address.complement ? ` - ${address.complement}` : ''}, ${address.neighborhood}, ${address.city} - ${address.state}, ${address.zipCode}`;
+        
+        const companyAddress = {
+          latitude: parseFloat(address.lat),
+          longitude: parseFloat(address.long),
+          address: fullAddress,
+          placeId: `company_address_${address.id}`
+        };
+        
+        setDestination(fullAddress);
+        localStorage.setItem('selectedDestination', JSON.stringify(companyAddress));
+      } catch (error) {
+        setUseCompanyAddress(false);
+        const message = error instanceof Error ? error.message : 'Erro ao buscar endereço da empresa';
+        showError(message);
+      } finally {
+        setLoadingCompanyAddress(false);
+      }
+    } else {
+      setDestination('');
+      localStorage.removeItem('selectedDestination');
     }
   };
 
   const handleContinue = async () => {
-    // Verificar se temos as informações necessárias
     const destinationData = localStorage.getItem('selectedDestination');
     const departureData = localStorage.getItem('selectedAddress');
     
@@ -77,30 +116,25 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       const departure = JSON.parse(departureData);
       const destination = JSON.parse(destinationData);
 
-      // Verificar se temos coordenadas válidas
       if (!departure.latitude || !departure.longitude || !destination.latitude || !destination.longitude) {
         throw new Error('Coordenadas de partida ou destino inválidas.');
       }
 
-      // Chamar API para buscar corridas sugeridas
       const response = await rideService.suggestRides({
         departureLatLng: [Number(departure.latitude), Number(departure.longitude)] as [number, number],
         destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number]
       });
 
-      // Passar os resultados para a próxima página
       const rides = response.data || [];
       onContinue?.(rides);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao buscar corridas sugeridas';
       showError(message);
-      console.error('Erro ao buscar corridas:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para salvar as coordenadas do destino quando selecionado
   const saveDestinationCoordinates = (address: AddressResult) => {
     const coordinates = {
       latitude: parseFloat(address.lat),
@@ -109,14 +143,11 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       placeId: address.place_id
     };
     
-    // Salvar no localStorage
     localStorage.setItem('selectedDestination', JSON.stringify(coordinates));
-    console.log('Coordenadas do destino salvas:', coordinates);
   };
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
       <div className="flex items-center p-3"> 
         <button 
           onClick={onBack}
@@ -128,7 +159,6 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       </div>
       
       <div className="px-6 py-8">
-        {/* Campo de Busca */}
         <div className="mb-6">
           <SearchInput
             placeholder="Insira o endereço completo"
@@ -136,11 +166,13 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
             onChange={setDestination}
             onAddressSelect={handleAddressSelect}
             showSuggestions={!useCompanyAddress}
-            disabled={useCompanyAddress}
+            disabled={useCompanyAddress || loadingCompanyAddress}
           />
+          {loadingCompanyAddress && (
+            <p className="mt-2 text-sm text-gray-500">Buscando endereço da empresa...</p>
+          )}
         </div>
 
-        {/* Checkbox para usar endereço da empresa */}
         <div className="mb-8">
           <label className="flex items-center cursor-pointer">
             <input
@@ -156,7 +188,6 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
         </div>
       </div>
 
-      {/* Loading overlay quando estiver buscando */}
       {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
@@ -166,7 +197,6 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
         </div>
       )}
 
-      {/* Botão Continuar - Fixo na parte inferior */}
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}

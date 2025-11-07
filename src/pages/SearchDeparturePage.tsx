@@ -12,13 +12,11 @@ interface AddressResult {
 interface SearchDeparturePageProps {
   onTabChange?: (tab: string) => void;
   onContinue?: () => void;
-  onBack?: () => void;
 }
 
 export const SearchDeparturePage: React.FC<SearchDeparturePageProps> = ({ 
   onTabChange, 
-  onContinue,
-  onBack 
+  onContinue
 }) => {
   const [departure, setDeparture] = useState('');
 
