@@ -16,10 +16,13 @@ export interface AuthError {
 
 class AuthService {
   private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  private tokenTimestampKey = 'authTokenIssuedAt';
+  private tokenValidityMs = 60 * 60 * 1000;
 
   // Salvar token no localStorage
   setToken(token: string): void {
     localStorage.setItem('authToken', token);
+    localStorage.setItem(this.tokenTimestampKey, Date.now().toString());
   }
 
   // Obter token do localStorage
@@ -30,11 +33,54 @@ class AuthService {
   // Remover token do localStorage
   removeToken(): void {
     localStorage.removeItem('authToken');
+    localStorage.removeItem(this.tokenTimestampKey);
+  }
+
+  private getTokenIssuedAt(): number | null {
+    const stored = localStorage.getItem(this.tokenTimestampKey);
+    if (!stored) {
+      return null;
+    }
+
+    const parsed = Number(stored);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  getTokenExpiryTime(): number | null {
+    const issuedAt = this.getTokenIssuedAt();
+    if (!issuedAt) {
+      return null;
+    }
+
+    return issuedAt + this.tokenValidityMs;
+  }
+
+  isTokenExpired(): boolean {
+    const expiry = this.getTokenExpiryTime();
+    if (!expiry) {
+      return true;
+    }
+
+    return Date.now() >= expiry;
   }
 
   // Verificar se usuário está autenticado
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    if (this.isTokenExpired()) {
+      this.logout();
+      return false;
+    }
+
+    return true;
   }
 
   // Fazer login

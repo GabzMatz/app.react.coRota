@@ -65,6 +65,27 @@ function AppContent() {
     localStorage.removeItem('selectedDestination');
   }, []);
 
+  const handleSessionExpiration = useCallback((message?: string) => {
+    authService.logout();
+    localStorage.removeItem('authUser');
+    resetCreateFlow();
+    setAuthMode('login');
+    setRegisterStep(1);
+    setActiveTab('search');
+    setCurrentPage('search');
+    setSelectedRide(null);
+    setSearchData(null);
+    setSearchResults([]);
+    setBookedRides([]);
+    setCompletedRides([]);
+    setLoadingRideHistory(false);
+    setLoadingCompletedRides(false);
+    setIsAuthenticated(false);
+    if (message) {
+      showError(message);
+    }
+  }, [resetCreateFlow, showError]);
+
   const handleTabChange = (tab: string) => {
     if (tab === 'messages') {
       return;
@@ -588,6 +609,28 @@ function AppContent() {
       showError(msg);
     }
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const expiryTime = authService.getTokenExpiryTime();
+    if (!expiryTime) {
+      handleSessionExpiration('Sua sessão expirou. Faça login novamente.');
+      return;
+    }
+
+    const timeout = Math.max(expiryTime - Date.now(), 0);
+
+    const timeoutId = window.setTimeout(() => {
+      handleSessionExpiration('Sua sessão expirou. Faça login novamente.');
+    }, timeout);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isAuthenticated, handleSessionExpiration]);
 
   return (
     <RegisterProvider>

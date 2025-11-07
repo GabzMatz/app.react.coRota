@@ -18,6 +18,7 @@ interface RideDetails {
   driverRating?: string;
   driverPhoto?: string;
   maxPassengers: number;
+  availableSeats: number;
 }
 
 interface RideDetailsPageProps {
@@ -193,7 +194,7 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
          {/* Informação de Passageiros */}
          <div className="flex items-center text-gray-600 mb-4">
            <Users className="w-5 h-5 mr-2" />
-           <span>{rideDetails.maxPassengers} passageiros no máximo</span>
+           <span>{rideDetails.availableSeats} passageiros no máximo</span>
          </div>
 
         {/* Botão Continuar */}
