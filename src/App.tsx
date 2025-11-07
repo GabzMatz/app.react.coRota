@@ -309,17 +309,14 @@ function AppContent() {
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
-      // Encontrar a corrida para obter a role e o rideId
       const booking = bookedRides.find(b => b.id === bookingId);
       if (!booking) {
-        console.error('Corrida não encontrada');
+        showError('Corrida não encontrada.');
         return;
       }
 
-      // Obter ID do usuário logado
       const userId = await getDriverId();
 
-      // Chamar a API apropriada baseado na role
       if (booking.role === 'driver') {
         await rideService.cancelAsDriver(booking.rideDetails.id, userId);
       } else if (booking.role === 'passenger') {
@@ -328,7 +325,8 @@ function AppContent() {
 
       await fetchRideHistory();
     } catch (error) {
-      console.error('Erro ao cancelar corrida:', error);
+      const message = error instanceof Error ? error.message : 'Erro ao cancelar corrida.';
+      showError(message);
     }
   };
 
