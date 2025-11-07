@@ -38,6 +38,24 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
     onTabChange?.(tab);
   };
 
+  const getAuthenticatedUserId = async (): Promise<string> => {
+    const authUserRaw = localStorage.getItem('authUser');
+    if (authUserRaw) {
+      try {
+        const authUser = JSON.parse(authUserRaw);
+        if (authUser?.id) {
+          return authUser.id as string;
+        }
+      } catch {
+        // ignorar parse inválido e buscar novamente
+      }
+    }
+
+    const me = await userService.getMe();
+    localStorage.setItem('authUser', JSON.stringify({ id: me.id, email: me.email }));
+    return me.id;
+  };
+
   const handleAddressSelect = (address: AddressResult) => {
     saveDestinationCoordinates(address);
   };
@@ -49,17 +67,8 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       try {
         setLoadingCompanyAddress(true);
         
-        const authUserRaw = localStorage.getItem('authUser');
-        if (!authUserRaw) {
-          throw new Error('Usuário não autenticado');
-        }
-        
-        const authUser = JSON.parse(authUserRaw);
-        if (!authUser.id) {
-          throw new Error('ID do usuário não encontrado');
-        }
-        
-        const user = await userService.getUserById(authUser.id);
+        const userId = await getAuthenticatedUserId();
+        const user = await userService.getUserById(userId);
         if (!user.companyId) {
           throw new Error('Empresa não encontrada no perfil do usuário');
         }
@@ -115,6 +124,7 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       
       const departure = JSON.parse(departureData);
       const destination = JSON.parse(destinationData);
+      const userId = await getAuthenticatedUserId();
 
       if (!departure.latitude || !departure.longitude || !destination.latitude || !destination.longitude) {
         throw new Error('Coordenadas de partida ou destino inválidas.');
@@ -122,7 +132,8 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
 
       const response = await rideService.suggestRides({
         departureLatLng: [Number(departure.latitude), Number(departure.longitude)] as [number, number],
-        destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number]
+        destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number],
+        userId
       });
 
       const rides = response.data || [];

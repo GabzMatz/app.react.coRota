@@ -19,6 +19,7 @@ export interface CreateRideResponse {
 export interface SuggestRidesRequest {
   departureLatLng: [number, number];
   destinationLatLng: [number, number];
+  userId: string;
 }
 
 export interface SuggestRidesResponse {
