@@ -30,6 +30,52 @@ import { useToast } from './contexts/ToastContext';
 import type { BookedRide } from './types';
 import { RideStatus } from './types';
 
+const PLAIN_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+type FirestoreTimestamp = { _seconds: number; _nanoseconds?: number };
+
+const isFirestoreTimestamp = (value: unknown): value is FirestoreTimestamp => {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    '_seconds' in (value as Record<string, unknown>)
+  );
+};
+
+const createDateFromPlainString = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const parseDateInput = (
+  value: string | Date | FirestoreTimestamp | null | undefined
+): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (isFirestoreTimestamp(value)) {
+    const timestamp =
+      value._seconds * 1000 + ((value._nanoseconds ?? 0) / 1000000);
+    return new Date(timestamp);
+  }
+
+  if (typeof value === 'string') {
+    if (PLAIN_DATE_PATTERN.test(value)) {
+      return createDateFromPlainString(value);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+};
+
 function AppContent() {
   const { showSuccess, showError } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
@@ -214,39 +260,17 @@ function AppContent() {
       const userId = await getDriverId();
       const history = await rideService.getRideHistory(userId);
 
-      // Converter timestamp do Firestore para data
-      const convertFirestoreTimestamp = (ts: { _seconds: number; _nanoseconds: number }) => {
-        return new Date(ts._seconds * 1000 + ts._nanoseconds / 1000000);
-      };
-
-      // Formatar data
-      const formatDate = (dateObj: { _seconds: number; _nanoseconds: number } | string) => {
-        let date: Date;
-        if (typeof dateObj === 'object' && '_seconds' in dateObj) {
-          date = convertFirestoreTimestamp(dateObj);
-        } else {
-          date = new Date(dateObj as string);
-        }
-        return formattedDate(date);
-      };
-
-      const formattedDate = (date: string | Date) => {
-        let newDate: Date;
-
-        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          // Cria a data manualmente para evitar a conversão de timezone
-          const [year, month, day] = date.split('-').map(Number);
-          newDate = new Date(year, month - 1, day);
-        } else {
-          newDate = new Date(date);
+      const formatDateDisplay = (date: Date | null) => {
+        if (!date) {
+          return '';
         }
 
-        return newDate.toLocaleDateString('pt-BR', {
+        return date.toLocaleDateString('pt-BR', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
         });
-      }
+      };
 
       // Formatar preço
       const formatPrice = (price: number) => {
@@ -290,20 +314,21 @@ function AppContent() {
         ]);
 
         // Obter timestamp da data da corrida para ordenação
+        const rideDateValue = parseDateInput(ride.date);
         let sortDateTimestamp: number;
-        if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
-          sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
-        } else if (ride.date) {
-          sortDateTimestamp = new Date(ride.date as string).getTime();
+        if (rideDateValue) {
+          sortDateTimestamp = rideDateValue.getTime();
         } else {
           // Fallback para data de criação se não houver data da corrida
           const createdAt = item.createdAt;
-          if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
-            sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
+          const createdAtDate = parseDateInput(createdAt);
+          if (createdAtDate) {
+            sortDateTimestamp = createdAtDate.getTime();
           } else {
             sortDateTimestamp = new Date().getTime();
           }
         }
+        const rideDateDisplay = formatDateDisplay(rideDateValue);
 
         // Buscar dados do motorista
         const driverData = driverMap.get(ride.driverId);
@@ -317,7 +342,7 @@ function AppContent() {
             id: ride.id,
             departureTime,
             arrivalTime,
-            date: formattedDate(ride.date),
+            date: rideDateDisplay,
             price: formatPrice(ride.pricePerPassenger),
             driverName,
             driverPhone: driverData?.phone,
@@ -334,7 +359,7 @@ function AppContent() {
             departure: 'Origem',
             passengers: ride.allSeats - ride.availableSeats
           },
-          bookingDate: formatDate(item.createdAt),
+          bookingDate: formatDateDisplay(parseDateInput(item.createdAt)),
           status: item.status || 'pending',
           role: item.role as 'driver' | 'passenger',
           sortDate: sortDateTimestamp
@@ -458,19 +483,11 @@ function AppContent() {
           const userId = await getDriverId();
           const history = await rideService.getRideHistory(userId);
           
-          // Converter timestamp do Firestore para data
-          const convertFirestoreTimestamp = (ts: { _seconds: number; _nanoseconds: number }) => {
-            return new Date(ts._seconds * 1000 + ts._nanoseconds / 1000000);
-          };
-
-          // Formatar data
-          const formatDate = (dateObj: { _seconds: number; _nanoseconds: number } | string) => {
-            let date: Date;
-            if (typeof dateObj === 'object' && '_seconds' in dateObj) {
-              date = convertFirestoreTimestamp(dateObj);
-            } else {
-              date = new Date(dateObj as string);
+          const formatDate = (date: Date | null) => {
+            if (!date) {
+              return '';
             }
+
             return date.toLocaleDateString('pt-BR', { 
               day: '2-digit', 
               month: 'long',
@@ -516,18 +533,15 @@ function AppContent() {
             ]);
 
             // Obter timestamp da data da corrida para ordenação
+            const rideDateValue = parseDateInput(ride.date);
             let sortDateTimestamp: number;
-            if (ride.date && typeof ride.date === 'object' && '_seconds' in ride.date) {
-              sortDateTimestamp = ride.date._seconds * 1000 + (ride.date._nanoseconds || 0) / 1000000;
-            } else if (ride.date) {
-              sortDateTimestamp = new Date(ride.date as string).getTime();
+            if (rideDateValue) {
+              sortDateTimestamp = rideDateValue.getTime();
             } else {
-              const createdAt = item.createdAt;
-              if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
-                sortDateTimestamp = createdAt._seconds * 1000 + (createdAt._nanoseconds || 0) / 1000000;
-              } else {
-                sortDateTimestamp = new Date().getTime();
-              }
+              const createdAtDate = parseDateInput(item.createdAt);
+              sortDateTimestamp = createdAtDate
+                ? createdAtDate.getTime()
+                : new Date().getTime();
             }
 
             // Buscar dados do motorista
@@ -542,7 +556,7 @@ function AppContent() {
                 id: ride.id,
                 departureTime: ride.startTime || ride.time || '--:--',
                 arrivalTime: ride.endTime || '--:--',
-                date: formatDate(ride.date),
+                date: formatDate(rideDateValue),
                 price: `R$ ${ride.pricePerPassenger.toFixed(2).replace('.', ',')}`,
                 driverName,
                 driverPhone: driverData?.phone,
@@ -559,7 +573,7 @@ function AppContent() {
                 departure: departureAddress,
                 passengers: ride.allSeats - ride.availableSeats
               },
-              bookingDate: formatDate(item.createdAt),
+              bookingDate: formatDate(parseDateInput(item.createdAt)),
               status: item.status || 'pending',
               role: item.role as 'driver' | 'passenger',
               sortDate: sortDateTimestamp
@@ -599,11 +613,9 @@ function AppContent() {
       setEditingRideId(rideId);
 
       // Converter timestamp do Firestore para data se necessário
-      let rideDate: Date;
-      if (rideData.date && typeof rideData.date === 'object' && '_seconds' in rideData.date) {
-        rideDate = new Date(rideData.date._seconds * 1000);
-      } else {
-        rideDate = new Date(rideData.date);
+      const rideDate = parseDateInput(rideData.date);
+      if (!rideDate) {
+        throw new Error('Data da corrida inválida.');
       }
 
       // Formatar data para YYYY-MM-DD

@@ -2,6 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 
+const PLAIN_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseDateValue = (value?: string | Date | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    if (PLAIN_DATE_PATTERN.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+};
+
 interface DateSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
@@ -17,18 +41,11 @@ export const DateSelectionPage: React.FC<DateSelectionPageProps> = ({
   initialDate,
   isEditing = false
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    initialDate ? new Date(initialDate) : null
-  );
-  const [currentMonth] = useState(initialDate ? new Date(initialDate) : new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => parseDateValue(initialDate));
+  const [currentMonth] = useState(() => parseDateValue(initialDate) ?? new Date());
   
   useEffect(() => {
-    if (initialDate) {
-      const date = new Date(initialDate);
-      setSelectedDate(date);
-    } else {
-      setSelectedDate(null);
-    }
+    setSelectedDate(parseDateValue(initialDate));
   }, [initialDate]);
 
   const handleTabChange = (tab: string) => {
