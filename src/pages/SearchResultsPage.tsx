@@ -113,6 +113,7 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       // arrivalDistance: 'Distância não calculada', // Mockado - comentado por enquanto
       price: formatPrice(ride.pricePerPassenger),
       driverName: ride.driverName || `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
+      driverPhone: ride.driverPhone,
       driverRating: '5,0', // Valor padrão, pode vir da API no futuro
       driverPhoto: ride.driverPhoto,
       maxPassengers: ride.allSeats || ride.availableSeats || 4
@@ -140,6 +141,7 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
         // arrivalDistance: 'Distância não calculada', // Mockado - comentado por enquanto
         price: formatPrice(ride.pricePerPassenger),
         driverName: ride.driverName || `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
+        driverPhone: ride.driverPhone,
         driverRating: '5,0',
         driverPhoto: ride.driverPhoto,
         maxPassengers: ride.allSeats || ride.availableSeats || 4
@@ -190,7 +192,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
             return {
               ...ride,
               driverName: `${driverData.firstName} ${driverData.lastName}`.trim(),
-              driverPhoto: ride.driverPhoto || undefined
+              driverPhoto: ride.driverPhoto || undefined,
+              driverPhone: driverData.phone
             };
           }
           
@@ -198,7 +201,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
           return {
             ...ride,
             driverName: `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
-            driverPhoto: ride.driverPhoto || undefined
+            driverPhoto: ride.driverPhoto || undefined,
+            driverPhone: ride.driverPhone
           };
         });
 

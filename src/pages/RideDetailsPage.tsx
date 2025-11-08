@@ -15,6 +15,7 @@ interface RideDetails {
   arrivalDistance?: string;
   price: string;
   driverName: string;
+  driverPhone?: string;
   driverRating?: string;
   driverPhoto?: string;
   maxPassengers: number;
@@ -29,6 +30,8 @@ interface RideDetailsPageProps {
 }
 
 export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, onTabChange, onBack, onPageChange }) => {
+  const driverPhoneDigits = rideDetails.driverPhone?.replace(/\D/g, '');
+
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
@@ -186,10 +189,19 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
            </div>
          </div>
 
-         {/* Texto de Contato (funcionalidade futura) */}
-         <div className="w-full text-blue-600 font-medium py-1 mb-3">
-           Contactar {rideDetails.driverName}
-         </div>
+        {/* Texto de Contato */}
+        {driverPhoneDigits ? (
+          <a
+            href={`tel:${driverPhoneDigits}`}
+            className="inline-flex items-center gap-2 text-blue-600 font-medium py-1 mb-3"
+          >
+            Contactar {rideDetails.driverName}
+          </a>
+        ) : (
+          <div className="w-full text-gray-400 font-medium py-1 mb-3">
+            Telefone do motorista indisponível
+          </div>
+        )}
 
          {/* Informação de Passageiros */}
          <div className="flex items-center text-gray-600 mb-4">

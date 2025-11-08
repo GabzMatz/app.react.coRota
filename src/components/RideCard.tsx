@@ -15,6 +15,7 @@ interface RideCardProps {
   role?: 'driver' | 'passenger';
   onEdit?: () => void;
   onCancel?: () => void;
+  onClick?: () => void;
 }
 
 export const RideCard: React.FC<RideCardProps> = ({
@@ -27,7 +28,8 @@ export const RideCard: React.FC<RideCardProps> = ({
   status,
   role,
   onEdit,
-  onCancel
+  onCancel,
+  onClick
 }) => {
   // Função para obter foto padrão quando não há foto do motorista
   const getDriverPhoto = (photo: string | undefined, name: string) => {
@@ -59,8 +61,20 @@ export const RideCard: React.FC<RideCardProps> = ({
   const statusConfig = getStatusConfig(normalizedStatus);
   const isPending = normalizedStatus === RideStatus.PENDING;
   
+  const handleCancelClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onCancel?.();
+  };
+
+  const handleEditClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onEdit?.();
+  };
+
+  const clickableClasses = onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : '';
+
   return (
-    <Card className="mx-4 p-1">
+    <Card className={`mx-4 p-1 ${clickableClasses}`} onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-4">
           {/* Horários e linha vertical */}
@@ -114,14 +128,14 @@ export const RideCard: React.FC<RideCardProps> = ({
           {isPending && (
             <div className="flex items-center justify-center gap-2">
               <button
-                onClick={onCancel}
+                onClick={handleCancelClick}
                 className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
               >
                 <X size={18}/>
               </button>
               {role === 'driver' && (
                 <button
-                  onClick={onEdit}
+                  onClick={handleEditClick}
                   className="w-10 h-10 rounded-full border transition bg-gray-200 flex items-center justify-center text-black hover:text-gray-700"
                 >
                   <Edit size={18} />

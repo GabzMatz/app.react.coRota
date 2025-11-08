@@ -5,6 +5,8 @@ import { SearchPage } from './pages/SearchPage';
 import { SearchDestinationPage } from './pages/SearchDestinationPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { RideDetailsPage } from './pages/RideDetailsPage';
+import { DriverRideDetailsPage } from './pages/DriverRideDetailsPage';
+import type { DriverPassengerInfo } from './pages/DriverRideDetailsPage';
 import { BookingPage } from './pages/BookingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreatePage } from './pages/CreatePage';
@@ -43,6 +45,10 @@ function AppContent() {
   const [loadingRideHistory, setLoadingRideHistory] = useState(false);
   const [completedRides, setCompletedRides] = useState<BookedRide[]>([]);
   const [loadingCompletedRides, setLoadingCompletedRides] = useState(false);
+  const [routesView, setRoutesView] = useState<'list' | 'driver-details'>('list');
+  const [selectedDriverRide, setSelectedDriverRide] = useState<BookedRide | null>(null);
+  const [driverPassengers, setDriverPassengers] = useState<DriverPassengerInfo[]>([]);
+  const [loadingDriverPassengers, setLoadingDriverPassengers] = useState(false);
   // Create flow selections
   const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
   const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
@@ -314,6 +320,7 @@ function AppContent() {
             date: formattedDate(ride.date),
             price: formatPrice(ride.pricePerPassenger),
             driverName,
+            driverPhone: driverData?.phone,
             driverPhoto: null,
             driverRating: '4.5',
             departureLocation: 'Origem',
@@ -366,12 +373,79 @@ function AppContent() {
     }
   };
 
+  const handleViewDriverRideDetails = async (ride: BookedRide) => {
+    if (ride.role !== 'driver') {
+      return;
+    }
+
+    setSelectedDriverRide(ride);
+    setRoutesView('driver-details');
+    setLoadingDriverPassengers(true);
+
+    try {
+      const rideId = ride.rideDetails?.id || ride.id;
+      const rideData = await rideService.getRideById(rideId);
+      const passengerIds: string[] = Array.isArray(rideData?.passengerIds) ? rideData.passengerIds : [];
+
+      setSelectedDriverRide(prev => prev ? {
+        ...prev,
+        rideDetails: {
+          ...prev.rideDetails,
+          passengerIds
+        }
+      } : prev);
+
+      if (passengerIds.length === 0) {
+        setDriverPassengers([]);
+        return;
+      }
+
+      const passengerPromises = passengerIds.map(async (passengerId) => {
+        try {
+          const passengerData = await userService.getUserById(passengerId);
+          const fullName = `${passengerData.firstName || ''} ${passengerData.lastName || ''}`.trim() || 'Passageiro sem nome';
+          return {
+            id: passengerData.id,
+            fullName,
+            phone: passengerData.phone,
+            addressId: passengerData.addressId
+          } as DriverPassengerInfo;
+        } catch (error) {
+          console.error(`Erro ao buscar passageiro ${passengerId}:`, error);
+          return null;
+        }
+      });
+
+      const passengersResult = await Promise.all(passengerPromises);
+      const validPassengers = passengersResult.filter((passenger): passenger is DriverPassengerInfo => Boolean(passenger));
+      setDriverPassengers(validPassengers);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao carregar detalhes da corrida.';
+      showError(message);
+      setRoutesView('list');
+      setSelectedDriverRide(null);
+      setDriverPassengers([]);
+    } finally {
+      setLoadingDriverPassengers(false);
+    }
+  };
+
+  const handleCloseDriverRideDetails = () => {
+    setRoutesView('list');
+    setSelectedDriverRide(null);
+    setDriverPassengers([]);
+  };
+
   // Carregar histórico de corridas quando a aba "routes" for ativada
   useEffect(() => {
     if (activeTab === 'routes') {
       fetchRideHistory();
     } else {
       setLoadingRideHistory(false);
+      setRoutesView('list');
+      setSelectedDriverRide(null);
+      setDriverPassengers([]);
+      setLoadingDriverPassengers(false);
     }
   }, [activeTab, fetchRideHistory]);
 
@@ -471,6 +545,7 @@ function AppContent() {
                 date: formatDate(ride.date),
                 price: `R$ ${ride.pricePerPassenger.toFixed(2).replace('.', ',')}`,
                 driverName,
+                driverPhone: driverData?.phone,
                 driverPhoto: null,
                 driverRating: '4.5',
                 departureLocation: 'Origem',
@@ -703,7 +778,25 @@ function AppContent() {
           {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} initialTime={createTime || undefined} />}
           {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} initialCount={createSeats || undefined} />}
           {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} initialPrice={editInitialPrice || undefined} />}
-          {activeTab === 'routes' && <RidesList onTabChange={handleTabChange} bookedRides={bookedRides} onCancelBooking={handleCancelBooking} onEditRide={handleEditRide} isLoading={loadingRideHistory} />}
+          {activeTab === 'routes' && routesView === 'list' && (
+            <RidesList
+              onTabChange={handleTabChange}
+              bookedRides={bookedRides}
+              onCancelBooking={handleCancelBooking}
+              onEditRide={handleEditRide}
+              isLoading={loadingRideHistory}
+              onViewRideDetails={handleViewDriverRideDetails}
+            />
+          )}
+          {activeTab === 'routes' && routesView === 'driver-details' && selectedDriverRide && (
+            <DriverRideDetailsPage
+              rideDetails={selectedDriverRide.rideDetails}
+              passengers={driverPassengers}
+              isLoadingPassengers={loadingDriverPassengers}
+              onBack={handleCloseDriverRideDetails}
+              onTabChange={handleTabChange}
+            />
+          )}
           {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
           {/* Adicione outras abas conforme necessário */}
         </>

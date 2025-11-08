@@ -11,9 +11,17 @@ interface RidesListProps {
   onCancelBooking?: (bookingId: string) => void;
   onEditRide?: (rideId: string) => void;
   isLoading?: boolean;
+  onViewRideDetails?: (ride: BookedRide) => void;
 }
 
-export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides = [], onCancelBooking, onEditRide, isLoading = false }) => {
+export const RidesList: React.FC<RidesListProps> = ({
+  onTabChange,
+  bookedRides = [],
+  onCancelBooking,
+  onEditRide,
+  isLoading = false,
+  onViewRideDetails
+}) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [rideToCancel, setRideToCancel] = useState<string | null>(null);
 
@@ -23,6 +31,10 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
 
   const handleEdit = (rideId: string) => {
     onEditRide?.(rideId);
+  };
+
+  const handleViewDetails = (ride: BookedRide) => {
+    onViewRideDetails?.(ride);
   };
 
   const handleCancel = (rideId: string) => {
@@ -80,6 +92,7 @@ export const RidesList: React.FC<RidesListProps> = ({ onTabChange, bookedRides =
               role={booking.role}
               onEdit={() => handleEdit(booking.rideDetails.id || booking.id)}
               onCancel={() => handleCancel(booking.id)}
+              onClick={booking.role === 'driver' ? () => handleViewDetails(booking) : undefined}
             />
           ))}
         </div>
