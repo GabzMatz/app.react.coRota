@@ -103,6 +103,7 @@ function AppContent() {
   const [editInitialDeparture, setEditInitialDeparture] = useState<string>('');
   const [editInitialDestination, setEditInitialDestination] = useState<string>('');
   const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
+  const [editPassengerIds, setEditPassengerIds] = useState<string[]>([]);
   // price is passed directly to handler; no need to store separately
 
   const resetCreateFlow = useCallback(() => {
@@ -114,6 +115,7 @@ function AppContent() {
     setEditInitialDeparture('');
     setEditInitialDestination('');
     setEditInitialPrice(null);
+    setEditPassengerIds([]);
     localStorage.removeItem('selectedAddress');
     localStorage.removeItem('selectedDestination');
   }, []);
@@ -650,6 +652,7 @@ function AppContent() {
       setEditInitialDeparture(departureAddress);
       setEditInitialDestination(destinationAddress);
       setEditInitialPrice(rideData.pricePerPassenger || null);
+      setEditPassengerIds(Array.isArray(rideData.passengerIds) ? rideData.passengerIds : []);
 
       // Navegar para o fluxo de criação na primeira etapa
       setCreateStep('departure');
@@ -690,7 +693,7 @@ function AppContent() {
         endTime,
         allSeats: createSeats,
         pricePerPassenger: price,
-        passengerIds: [] as string[]
+        passengerIds: editingRideId ? editPassengerIds : []
       };
 
       // Verificar se está editando ou criando
