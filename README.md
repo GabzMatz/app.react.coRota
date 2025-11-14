@@ -6,6 +6,10 @@ Aplicação web desenvolvida em React com TypeScript e Vite para o projeto Rides
 
 Seu objetivo é reduzir custos de transporte, diminuir a emissão de poluentes e incentivar a mobilidade urbana sustentável por meio do uso inteligente de rotas e horários compatíveis entre motoristas e passageiros.
 
+## 🌐 Aplicação em Produção
+
+A aplicação está disponível em: **[https://appreactcorota.vercel.app/](https://appreactcorota.vercel.app/)**
+
 ## 🚀 Tecnologias Utilizadas
 
 - **React 18** - Biblioteca para interfaces de usuário
@@ -129,6 +133,26 @@ npm run lint
 - Histórico de caronas criadas
 - Status das caronas (ativa, finalizada, cancelada)
 
+## 📚 Documentação
+
+A documentação completa do projeto está disponível na pasta `docs/`. Cada arquivo do projeto possui sua documentação correspondente seguindo o padrão estabelecido.
+
+### Estrutura da Documentação
+
+- `docs/components/` - Documentação dos componentes React
+- `docs/pages/` - Documentação das páginas/rotas
+- `docs/services/` - Documentação dos serviços (API)
+- `docs/hooks/` - Documentação dos hooks customizados
+- `docs/contexts/` - Documentação dos contextos React
+- `docs/types/` - Documentação dos tipos e interfaces
+- `docs/utils/` - Documentação das funções utilitárias
+- `docs/App.md` - Documentação do componente principal App
+- `docs/main.md` - Documentação do ponto de entrada da aplicação
+
+### Como navegar
+
+Cada arquivo `.md` na pasta `docs/` corresponde a um arquivo do projeto na pasta `src/`. Use os links relacionados em cada documento para navegar entre arquivos relacionados.
+
 ## 🚀 Deploy
 
 Para fazer deploy em produção:
@@ -139,4 +163,4 @@ npm run build
 
 # Os arquivos estarão na pasta dist/
 # Faça upload para seu servidor de hospedagem
-``
+```
