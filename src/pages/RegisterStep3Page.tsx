@@ -26,17 +26,14 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
 
   const [fieldValidations, setFieldValidations] = useState<Record<string, { isValid: boolean; message: string }>>({});
 
-  // Função para validar CEP
   const validateCEP = (cep: string) => {
     const cepRegex = /^\d{5}-?\d{3}$/;
     return cepRegex.test(cep);
   };
 
-  // Função para atualizar validações
   const updateValidations = (data: Record<string, string>) => {
     const newValidations: Record<string, { isValid: boolean; message: string }> = {};
 
-    // Validação do CEP
     if (data.cep) {
       if (validateCEP(data.cep)) {
         newValidations.cep = { isValid: true, message: 'CEP válido' };
@@ -48,7 +45,6 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
     setFieldValidations(newValidations);
   };
 
-  // Função para criar endereço na API
   const createAddress = async (addressData: Record<string, string>) => {
     try {
       console.log('🏠 Dados recebidos do formulário:', addressData);
@@ -60,8 +56,8 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
         city: addressData.cidade || '',
         state: addressData.estado || '',
         zipCode: addressData.cep || '',
-        lat: "-23.518970", // Por enquanto usando coordenadas fixas - pode ser melhorado depois
-        long: "-47.458640", // Por enquanto usando coordenadas fixas - pode ser melhorado depois
+        lat: "-23.518970",
+        long: "-47.458640",
         complement: addressData.complemento || '',
         isActive: true
       };
@@ -78,20 +74,15 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
     }
   };
 
-  // Função para limpar CPF (remover pontuação)
   const cleanCPF = (cpf: string): string => {
-    return cpf.replace(/\D/g, ''); // Remove tudo que não é dígito
+    return cpf.replace(/\D/g, '');
   };
 
-  // Função para limpar telefone e adicionar +55
   const cleanPhone = (phone: string): string => {
-    const cleaned = phone.replace(/\D/g, ''); // Remove tudo que não é dígito
-    return `+55${cleaned}`; // Adiciona +55 no início
+    const cleaned = phone.replace(/\D/g, '');
+    return `+55${cleaned}`;
   };
 
-  // Função para criar usuário na API
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const createUser = async (completeData: any, createdAddress: any, selectedCompany: Company | null) => {
     try {
       console.log('👤 Criando usuário na API...');
@@ -99,11 +90,10 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
       console.log('🏠 Endereço criado:', createdAddress);
       console.log('🏢 Empresa selecionada:', selectedCompany);
 
-      // Separar nome completo em primeiro e último nome
       const fullName = completeData.nomeCompleto || '';
       const nameParts = fullName.split(' ').filter((part: string) => part.trim() !== '');
       const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName; // Se não há sobrenome, usa o primeiro nome
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
 
       console.log('👤 Processando nome:', { fullName, firstName, lastName });
       console.log('🧹 Limpando dados:', {
@@ -143,10 +133,8 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
     try {
       console.log('📝 Dados do formulário de endereço:', data);
       
-      // Primeiro, criar o endereço na API usando os dados do formulário
       const createdAddress = await createAddress(data);
       
-      // Salvar dados do terceiro passo (incluindo o endereço criado)
       updateRegisterData('step3', {
         cep: data.cep,
         rua: data.rua,
@@ -158,11 +146,9 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
         createdAddress: createdAddress
       });
       
-      // Obter todos os dados completos
       const completeData = getCompleteData();
       console.log('📋 Dados completos do registro:', completeData);
       
-      // Agora criar o usuário na API usando a empresa selecionada do contexto
       const selectedCompany = completeData.selectedCompany;
       
       if (!selectedCompany) {
@@ -171,13 +157,10 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
       
       const createdUser = await createUser(completeData, createdAddress, selectedCompany);
       
-      // Salvar o usuário criado no contexto
       updateRegisterData('step3', { createdUser });
       
-      // Limpar dados do contexto
       clearRegisterData();
       
-      // Finalizar processo
       onComplete();
     } catch (error) {
       console.error('❌ Erro no processo de registro:', error);

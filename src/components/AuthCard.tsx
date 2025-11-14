@@ -63,9 +63,7 @@ const AuthCard: React.FC<AuthCardProps> = ({
     }));
   };
 
-  // Função para verificar se todos os campos obrigatórios estão preenchidos
   const isFormValid = React.useMemo(() => {
-    // Primeiro verifica se há validações inválidas
     const hasInvalidValidations = Object.values(fieldValidations).some(
       validation => validation.isValid === false
     );
@@ -73,25 +71,20 @@ const AuthCard: React.FC<AuthCardProps> = ({
       return false;
     }
 
-    // Depois verifica se todos os campos obrigatórios estão preenchidos
     return fields.every(field => {
-      // Se o campo não é obrigatório, não precisa validar
       if (!field.required) {
         return true;
       }
 
-      // Se o campo está desabilitado, não precisa validar
       if (field.disabled) {
         return true;
       }
 
-      // Para campos customComponent, verifica o valor externo
       if (field.customComponent) {
         const externalValue = externalFieldValues[field.name];
         return externalValue && externalValue.trim() !== '';
       }
 
-      // Para campos normais, verifica o formData
       const value = formData[field.name];
       return value && value.trim() !== '';
     });
@@ -105,7 +98,6 @@ const AuthCard: React.FC<AuthCardProps> = ({
     };
     setFormData(newData);
     
-    // Se há uma função de validação externa, chama ela
     if (onInputChange) {
       onInputChange(newData);
     }
@@ -129,7 +121,7 @@ const AuthCard: React.FC<AuthCardProps> = ({
       
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
-          {/* Header with back button */}
+          
           {showBackButton && (
             <div className="mb-6">
               <button 
@@ -141,19 +133,19 @@ const AuthCard: React.FC<AuthCardProps> = ({
             </div>
           )}
           
-          {/* Logo */}
+          
           {showLogo && (
             <div className="flex justify-center mb-8">
               <img src={logo} alt="Logo" className="w-24 h-24 object-contain" />
             </div>
           )}
           
-          {/* Title */}
+          
           {title && (
             <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">{title}</h2>
           )}
           
-          {/* Form */}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             {fields.map((field) => (
               <div key={field.name} className="space-y-2">
@@ -256,14 +248,14 @@ const AuthCard: React.FC<AuthCardProps> = ({
             </button>
           </form>
 
-          {/* Error Message */}
+          
           {error && (
             <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
               <p className="text-red-600 text-sm text-center">{error}</p>
             </div>
           )}
 
-          {/* Links */}
+          
           <div className="mt-6 text-center space-y-2">
             <span 
               className="text-gray-700 underline cursor-pointer text-sm transition-colors hover:text-blue-500 block"

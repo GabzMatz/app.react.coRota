@@ -19,7 +19,6 @@ interface CreatePageProps {
 export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChange, initialDeparture, isEditing = false }) => {
   const [departure, setDeparture] = useState(initialDeparture || '');
   
-  // Atualizar quando initialDeparture mudar
   useEffect(() => {
     setDeparture(initialDeparture || '');
   }, [initialDeparture]);
@@ -31,16 +30,14 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
   const isContinueDisabled = !departure.trim();
 
   const handleAddressSelect = (address: AddressResult) => {
-    saveCoordinates(address); // Salva as coordenadas automaticamente
+    saveCoordinates(address);
     console.log('Endereço selecionado e coordenadas salvas:', address);
     
-    // Navegar automaticamente para a tela de destino
     setTimeout(() => {
       onStepChange?.('destination');
-    }, 500); // Pequeno delay para mostrar o feedback
+    }, 500);
   };
 
-  // Função para salvar as coordenadas quando um endereço é selecionado
   const saveCoordinates = (address: AddressResult) => {
     const coordinates = {
       latitude: parseFloat(address.lat),
@@ -49,7 +46,6 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
       placeId: address.place_id
     };
     
-    // Salvar no localStorage ou enviar para API
     localStorage.setItem('selectedAddress', JSON.stringify(coordinates));
     console.log('Coordenadas salvas:', coordinates);
   };
@@ -65,12 +61,12 @@ export const CreatePage: React.FC<CreatePageProps> = ({ onTabChange, onStepChang
   return (
     <div className="min-h-screen bg-white pb-20 flex flex-col">
       <div className="px-6 py-8 flex-1">
-        {/* Título */}
+        
         <h1 className="text-2xl font-bold text-gray-900 mb-8">
           De onde você vai sair?
         </h1>
 
-        {/* Campo de Busca */}
+        
         <div className="mb-8">
           <SearchInput
             placeholder="Insira o endereço completo"

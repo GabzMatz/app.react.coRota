@@ -21,11 +21,9 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
 
   const [fieldValidations, setFieldValidations] = useState<Record<string, { isValid: boolean; message: string }>>({});
 
-  // Função para atualizar validações baseada nos dados do formulário
   const updateValidations = (data: Record<string, string>) => {
     const newValidations: Record<string, { isValid: boolean; message: string }> = {};
 
-    // Validação do nome de usuário
     if (data.nomeUsuario) {
       if (data.nomeUsuario.length >= 3) {
         newValidations.nomeUsuario = { isValid: true, message: 'disponível' };
@@ -34,7 +32,6 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
       }
     }
 
-    // Validação de senhas
     if (data.senha && data.confirmarSenha) {
       const isValid = data.senha === data.confirmarSenha && data.confirmarSenha.length > 0;
       newValidations.confirmarSenha = { 
@@ -46,9 +43,7 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     setFieldValidations(newValidations);
   };
 
-  // Função para limpar dados do carro quando selecionar "Não"
   const handleInputChangeWithCarLogic = (data: Record<string, string>) => {
-    // Se selecionou "Não" para ter carro, limpa os dados do carro
     if (data.possuiCarro === 'Não') {
       data.dadosCarro = '';
     }
@@ -58,7 +53,6 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
 
   const handleSubmit = (data: Record<string, string>) => {
     console.log('Dados do registro passo 2:', data);
-    // Salvar dados do segundo passo
     updateRegisterData('step2', {
       nomeCompleto: data.nomeCompleto,
       telefone: data.telefone,
@@ -71,15 +65,12 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     onNext();
   };
 
-  // Estado para controlar se o campo dados do carro está desabilitado
   const [isCarDataDisabled, setIsCarDataDisabled] = useState(false);
 
-  // Função para atualizar campos baseada na seleção de carro
   const updateFieldsBasedOnCar = (data: Record<string, string>) => {
     const hasCar = data.possuiCarro === 'Sim';
     setIsCarDataDisabled(!hasCar);
     
-    // Se não tem carro, limpa os dados do carro
     if (!hasCar) {
       data.dadosCarro = '';
     }

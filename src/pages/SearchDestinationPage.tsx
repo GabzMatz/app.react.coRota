@@ -18,7 +18,6 @@ interface AddressResult {
 interface SearchDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onContinue?: (rides: any[]) => void;
   searchData?: { departure: string; passengers: number };
 }
@@ -47,7 +46,6 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
           return authUser.id as string;
         }
       } catch {
-        // ignorar parse inválido e buscar novamente
       }
     }
 

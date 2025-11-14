@@ -19,18 +19,15 @@ class AuthService {
   private tokenTimestampKey = 'authTokenIssuedAt';
   private tokenValidityMs = 60 * 60 * 1000;
 
-  // Salvar token no localStorage
   setToken(token: string): void {
     localStorage.setItem('authToken', token);
     localStorage.setItem(this.tokenTimestampKey, Date.now().toString());
   }
 
-  // Obter token do localStorage
   getToken(): string | null {
     return localStorage.getItem('authToken');
   }
 
-  // Remover token do localStorage
   removeToken(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem(this.tokenTimestampKey);
@@ -68,7 +65,6 @@ class AuthService {
     return Date.now() >= expiry;
   }
 
-  // Verificar se usuário está autenticado
   isAuthenticated(): boolean {
     const token = this.getToken();
     if (!token) {
@@ -83,7 +79,6 @@ class AuthService {
     return true;
   }
 
-  // Fazer login
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       const response = await fetch(`${this.baseURL}/auth/login`, {
@@ -101,7 +96,6 @@ class AuthService {
 
       const data: LoginResponse = await response.json();
       
-      // Salvar token automaticamente
       if (data.token) {
         this.setToken(data.token);
       }
@@ -115,12 +109,10 @@ class AuthService {
     }
   }
 
-  // Fazer logout
   logout(): void {
     this.removeToken();
   }
 
-  // Obter headers com token para requisições autenticadas
   getAuthHeaders(): Record<string, string> {
     const token = this.getToken();
     return {

@@ -7,7 +7,6 @@ interface BottomNavProps {
   onTabChange?: (tab: string) => void;
 }
 
-// Componente para o logo personalizado
 const LogoIcon = ({ size = 28, className = "" }) => (
   <img 
     src={logo} 

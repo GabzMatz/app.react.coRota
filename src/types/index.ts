@@ -6,11 +6,10 @@ export enum RideStatus {
 
 export interface BookedRide {
   id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rideDetails: any;
   searchData: { departure: string; passengers: number };
   bookingDate: string;
   status: 'confirmed' | 'cancelled' | RideStatus;
   role?: 'driver' | 'passenger';
-  sortDate?: number; // Timestamp em milissegundos para ordenação
+  sortDate?: number;
 }

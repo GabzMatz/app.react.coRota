@@ -11,8 +11,6 @@ interface ProfilePageProps {
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout }) => {
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -21,7 +19,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
     const loadUserData = async () => {
       try {
         setLoading(true);
-        // Obter ID do usuário logado
         const authUserRaw = localStorage.getItem('authUser');
         let userId: string;
         
@@ -29,13 +26,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
           const authUser = JSON.parse(authUserRaw);
           userId = authUser.id;
         } else {
-          // Fallback: buscar da API
           const me = await userService.getMe();
           userId = me.id;
           localStorage.setItem('authUser', JSON.stringify({ id: me.id, email: me.email }));
         }
 
-        // Buscar dados completos do usuário
         const user = await userService.getUserById(userId);
         setUserData(user);
       } catch (error) {
@@ -69,31 +64,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
     onTabChange?.(tab);
   };
 
-  // Função para formatar CPF
   const formatCPF = (cpf: string) => {
     if (!cpf) return '';
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
-  // Função para formatar telefone (suporta código do país e diferentes comprimentos)
   const formatPhone = (phone: string) => {
     if (!phone) return '';
 
-    // Remover qualquer caractere não numérico
     const digits = phone.replace(/\D/g, '');
     if (digits.length === 0) return phone;
 
     let countryCode = '';
     let number = digits;
 
-    // Se tiver mais de 11 dígitos, considerar os extras como código do país
     if (digits.length > 11) {
       const excess = digits.length - 11;
       countryCode = digits.slice(0, excess);
       number = digits.slice(excess);
     }
 
-    // Tratar telefones fixos (10 dígitos) e celulares (11 dígitos)
     if (number.length === 10) {
       const area = number.slice(0, 2);
       const part1 = number.slice(2, 6);
@@ -108,11 +98,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
       return `${countryCode ? `+${countryCode} ` : ''}(${area}) ${part1}-${part2}`;
     }
 
-    // Fallback para outros formatos
     return countryCode ? `+${countryCode} ${number}` : number;
   };
 
-  // Obter foto do usuário ou usar inicial
   const getUserPhoto = () => {
     if (userData?.photo) return userData.photo;
     const initials = userData 
@@ -123,7 +111,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header */}
+      
       <div className="bg-gradient-to-b from-blue-500 to-blue-600 pt-5 pb-5 mb-4">
         <h1 className="text-2xl font-bold px-3 text-white">Perfil</h1>
       </div>
@@ -135,7 +123,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
         </div>
       ) : userData ? (
         <div className="px-4">
-          {/* Foto e Nome */}
+          
           <div className="flex flex-col items-center py-6">
             <img
               src={getUserPhoto()}
@@ -152,9 +140,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
             )}
           </div>
 
-          {/* Informações do Usuário */}
+          
           <div className="space-y-3 mb-6">
-            {/* Email */}
+            
             <div className="bg-gray-50 rounded-lg p-4 flex items-start gap-3">
               <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
@@ -163,7 +151,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
               </div>
             </div>
 
-            {/* Telefone */}
+            
             {userData.phone && (
               <div className="bg-gray-50 rounded-lg p-4 flex items-start gap-3">
                 <Phone className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -174,7 +162,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
               </div>
             )}
 
-            {/* CPF */}
+            
             {userData.cpf && (
               <div className="bg-gray-50 rounded-lg p-4 flex items-start gap-3">
                 <CreditCard className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -186,7 +174,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
             )}
           </div>
 
-          {/* Botão Sair */}
+          
           <button
             onClick={handleLogoutClick}
             className="w-full bg-red-600 text-white py-4 rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 mb-6"

@@ -19,7 +19,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
   const handleCompanySelect = (company: Company) => {
     setSelectedCompany(company);
     setEmpresaValue(company.name);
-    // Revalidar email quando empresa mudar
     if (currentEmail) {
       validateEmail(currentEmail);
     }
@@ -29,11 +28,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
     setEmpresaValue(value);
     if (!value) {
       setSelectedCompany(null);
-      // Revalidar email se houver um email digitado (vai mostrar erro de empresa não selecionada)
       if (currentEmail) {
         validateEmail(currentEmail);
       } else {
-        // Limpar validação de email se não houver email digitado
         setFieldValidations(prev => {
           const newValidations = { ...prev };
           delete newValidations.email;
@@ -43,7 +40,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
     }
   };
 
-  // Função para validar email contra o array de emails da empresa
   const validateEmail = (email: string) => {
     if (!email) {
       setFieldValidations(prev => {
@@ -79,7 +75,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
     }));
   };
 
-  // Função para atualizar validações quando os dados mudarem
   const handleInputChange = (data: Record<string, string>) => {
     if (data.email !== undefined) {
       setCurrentEmail(data.email);
@@ -124,7 +119,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
     console.log('Dados do registro passo 1:', data);
     console.log('Empresa selecionada:', selectedCompany);
     
-    // Validar email antes de avançar
     if (!selectedCompany) {
       setFieldValidations(prev => ({
         ...prev,
@@ -152,7 +146,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegisterSuccess, onLoginC
       return;
     }
     
-    // Salvar dados do primeiro passo
     updateRegisterData('step1', {
       empresa: empresaValue,
       cpf: data.cpf,

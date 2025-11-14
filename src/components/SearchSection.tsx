@@ -30,7 +30,6 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
   };
 
   const handleAddressSelect = (address: AddressResult) => {
-    // Salvar coordenadas de partida quando um endereço é selecionado
     const coordinates = {
       latitude: parseFloat(address.lat),
       longitude: parseFloat(address.lon),
@@ -46,12 +45,10 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
   const handleDepartureChange = (value: string) => {
     setDeparture(value);
-    // Se o usuário editar manualmente o campo, remover a flag de endereço selecionado
     if (hasSelectedAddress) {
       const storedAddress = localStorage.getItem('selectedAddress');
       if (storedAddress) {
         const parsed = JSON.parse(storedAddress);
-        // Se o texto não corresponder ao endereço salvo, remover a seleção
         if (parsed.address !== value) {
           setHasSelectedAddress(false);
           localStorage.removeItem('selectedAddress');
@@ -62,7 +59,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
 
   return (
     <div className="relative overflow-visible">
-      {/* Imagem Panel */}
+      
       <div className="relative">
         <img 
           src={panel} 
@@ -71,10 +68,10 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
         />
       </div>
 
-      {/* Card de Pesquisa Sobreposto */}
+      
       <div className="absolute -bottom-15 left-0 right-0 z-10 px-4">
         <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 relative overflow-visible">
-          {/* Campo de Partida */}
+          
           <div className="mb-4 relative z-50">
             <SearchInput
               placeholder="Partida"
@@ -89,7 +86,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             )}
           </div>
 
-          {/* Linha com Calendário e Passageiros */}
+          
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center text-blue-600">
               <Calendar className="w-5 h-5 mr-2" />
@@ -116,23 +113,20 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             </div>
           </div>
 
-          {/* Botão Procurar */}
+          
           <button 
             onClick={() => {
-              // Verificar se o campo está preenchido
               if (!departure.trim()) {
                 showError('Por favor, informe um endereço de partida.');
                 return;
               }
 
-              // Verificar se há endereço de partida selecionado com coordenadas
               const departureData = localStorage.getItem('selectedAddress');
               if (!departureData) {
                 showError('Por favor, selecione um endereço de partida usando as sugestões que aparecem ao digitar.');
                 return;
               }
 
-              // Verificar se as coordenadas são válidas
               try {
                 const coordinates = JSON.parse(departureData);
                 if (!coordinates.latitude || !coordinates.longitude) {
@@ -144,7 +138,6 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
                 return;
               }
 
-              // Salvar dados de partida e passageiros
               localStorage.setItem('searchDeparture', departure);
               localStorage.setItem('searchPassengers', String(passengers));
               onSearch?.({ departure, passengers });

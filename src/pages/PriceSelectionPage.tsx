@@ -45,7 +45,7 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
+      
       <div className="flex items-center p-3">
         <button 
           onClick={onBack}
@@ -56,7 +56,7 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
         <h1 className="text-xl font-bold text-gray-900">Defina o preço da carona</h1>
       </div>
 
-      {/* Seletor de preço */}
+      
       <div className="flex items-center justify-center mt-15 py-20">
         <button
           onClick={handleDecrement}
@@ -92,7 +92,7 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
         </button>
       </div>
 
-      {/* Botão Oferecer Carona - Fixo na parte inferior */}
+      
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleOfferRide}

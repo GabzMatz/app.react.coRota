@@ -23,8 +23,6 @@ export const useAddressSearch = (query: string, delay: number = 1000) => {
     setError(null);
 
     try {
-      // Usando Photon (CORS-friendly) para evitar bloqueios
-      // Photon não suporta 'pt' no parâmetro lang; usar sem lang para evitar 400
       const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&limit=5`;
       const response = await fetch(url);
 
@@ -66,7 +64,6 @@ export const useAddressSearch = (query: string, delay: number = 1000) => {
     }
   }, []);
 
-  // Debounce effect
   useEffect(() => {
     const timer = setTimeout(() => {
       searchAddress(query);

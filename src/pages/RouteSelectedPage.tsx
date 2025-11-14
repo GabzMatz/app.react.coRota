@@ -19,7 +19,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routingControlRef = useRef<L.Routing.Control | null>(null);
   
-  // Estado para dados da rota
   const [routeData, setRouteData] = useState({
     duration: 'Calculando...',
     distance: 'Calculando...',
@@ -41,7 +40,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     onNavigateToDateSelection?.();
   };
 
-  // Função para simplificar endereços
   const getShortAddress = (fullAddress: string): string => {
     const parts = fullAddress.split(',').map(part => part.trim());
     const city = parts[0];
@@ -53,9 +51,8 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     return city || fullAddress;
   };
 
-  // Função para calcular distância entre dois pontos (Haversine)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Raio da Terra em km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -66,7 +63,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     return R * c;
   };
 
-  // Função para formatar tempo
   const formatDuration = (minutes: number): string => {
     if (minutes < 60) {
       return `${Math.round(minutes)} min`;
@@ -77,7 +73,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     }
   };
 
-  // Função para formatar distância
   const formatDistance = (km: number): string => {
     if (km < 1) {
       return `${Math.round(km * 1000)} m`;
@@ -86,27 +81,22 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     }
   };
 
-  // Inicializar o mapa com roteamento
   useEffect(() => {
     if (!mapRef.current || !tripData) return;
 
-    // Limpar mapa anterior se existir
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
     }
 
-    // Criar mapa
     const map = L.map(mapRef.current).setView(
       [tripData.departure.latitude, tripData.departure.longitude], 
       13
     );
 
-    // Adicionar camada de tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Leaflet | © OpenStreetMap contributors'
     }).addTo(map);
 
-    // Calcular distância em linha reta para estimativa inicial
     const straightDistance = calculateDistance(
       tripData.departure.latitude, 
       tripData.departure.longitude,
@@ -114,17 +104,14 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
       tripData.destination.longitude
     );
 
-    // Estimar tempo baseado na distância (assumindo velocidade média de 50 km/h)
     const estimatedTime = (straightDistance / 50) * 60;
 
-    // Atualizar dados da rota com estimativa
     setRouteData({
       duration: formatDuration(estimatedTime),
       distance: formatDistance(straightDistance),
       description: 'Rota mais rápida'
     });
 
-    // Adicionar marcadores personalizados
     const departureIcon = L.divIcon({
       className: 'custom-div-icon',
       html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
@@ -139,17 +126,14 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
       iconAnchor: [10, 10]
     });
 
-    // Marcador de partida
     L.marker([tripData.departure.latitude, tripData.departure.longitude], {
       icon: departureIcon
     }).addTo(map).bindPopup(`<b>Partida:</b><br>${tripData.departure.address}`);
 
-    // Marcador de destino
     L.marker([tripData.destination.latitude, tripData.destination.longitude], {
       icon: destinationIcon
     }).addTo(map).bindPopup(`<b>Destino:</b><br>${tripData.destination.address}`);
 
-    // Configurar roteamento
     const routingControl = L.Routing.control({
       waypoints: [
         L.latLng(tripData.departure.latitude, tripData.departure.longitude),
@@ -163,20 +147,19 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
       },
       addWaypoints: false,
       fitSelectedRoutes: true,
-      show: false, // Esconder o painel de roteamento
+      show: false,
       router: L.Routing.osrmv1({
         serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1',
         profile: 'driving'
       })
     }).addTo(map);
 
-    // Escutar eventos de roteamento para obter dados reais
     routingControl.on('routesfound', function(e: any) {
       const routes = e.routes;
       if (routes && routes.length > 0) {
         const route = routes[0];
-        const distance = route.summary.totalDistance / 1000; // Converter para km
-        const duration = route.summary.totalTime / 60; // Converter para minutos
+        const distance = route.summary.totalDistance / 1000;
+        const duration = route.summary.totalTime / 60;
 
         setRouteData({
           duration: formatDuration(duration),
@@ -184,12 +167,10 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
           description: 'Rota mais rápida'
         });
 
-        // Persistir duração em minutos para ser usada no cálculo do endTime
         try {
           const rounded = Math.round(duration);
           localStorage.setItem('routeDurationMinutes', String(rounded));
         } catch (_) {
-          // noop
         }
       }
     });
@@ -197,7 +178,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
     routingControlRef.current = routingControl;
     mapInstanceRef.current = map;
 
-    // Cleanup
     return () => {
       if (routingControlRef.current) {
         map.removeControl(routingControlRef.current);
@@ -210,7 +190,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
       <div className="flex items-center p-3">
         <button 
           onClick={onBack}
@@ -221,7 +200,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
         <h1 className="text-xl font-bold text-gray-900">Trajeto selecionado</h1>
       </div>
 
-      {/* Mapa real */}
       <div className="relative h-96 border-b border-gray-200">
         <div 
           ref={mapRef} 
@@ -238,7 +216,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
         )}
       </div>
 
-      {/* Informações da rota */}
       <div className="px-6 py-4">
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
@@ -277,7 +254,6 @@ export const RouteSelectedPage: React.FC<RouteSelectedPageProps> = ({ onTabChang
         </div>
       </div>
 
-      {/* Botão Continuar - Fixo na parte inferior */}
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}

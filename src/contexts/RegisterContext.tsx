@@ -4,12 +4,9 @@ import type { UserRegisterResponse } from '../services/userService';
 import type { Company } from '../services/companyService';
 
 export interface RegisterData {
-  // Passo 1 - Dados da empresa
   empresa: string;
   cpf: string;
   email: string;
-  
-  // Passo 2 - Dados pessoais
   nomeCompleto: string;
   telefone: string;
   possuiCarro: string;
@@ -17,8 +14,6 @@ export interface RegisterData {
   nomeUsuario: string;
   senha: string;
   confirmarSenha: string;
-  
-  // Passo 3 - Dados de endereço
   cep: string;
   rua: string;
   numero: string;
@@ -26,14 +21,8 @@ export interface RegisterData {
   cidade: string;
   estado: string;
   complemento: string;
-  
-  // Endereço criado na API
   createdAddress?: AddressCreateResponse;
-  
-  // Usuário criado na API
   createdUser?: UserRegisterResponse;
-  
-  // Empresa selecionada
   selectedCompany?: Company;
 }
 
@@ -47,12 +36,9 @@ interface RegisterContextType {
 const RegisterContext = createContext<RegisterContextType | undefined>(undefined);
 
 const initialData: RegisterData = {
-  // Passo 1
   empresa: '',
   cpf: '',
   email: '',
-  
-  // Passo 2
   nomeCompleto: '',
   telefone: '',
   possuiCarro: '',
@@ -60,8 +46,6 @@ const initialData: RegisterData = {
   nomeUsuario: '',
   senha: '',
   confirmarSenha: '',
-  
-  // Passo 3
   cep: '',
   rua: '',
   numero: '',

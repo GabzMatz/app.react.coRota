@@ -17,7 +17,6 @@ interface TripData {
 export const useTripData = () => {
   const [tripData, setTripData] = useState<TripData | null>(null);
 
-  // Carregar dados da viagem do localStorage
   const loadTripData = () => {
     try {
       const savedTripData = localStorage.getItem('tripData');
@@ -32,7 +31,6 @@ export const useTripData = () => {
     return null;
   };
 
-  // Salvar dados da viagem
   const saveTripData = (data: TripData) => {
     try {
       localStorage.setItem('tripData', JSON.stringify(data));
@@ -44,7 +42,6 @@ export const useTripData = () => {
     }
   };
 
-  // Limpar dados da viagem
   const clearTripData = () => {
     localStorage.removeItem('tripData');
     localStorage.removeItem('selectedAddress');
@@ -52,12 +49,10 @@ export const useTripData = () => {
     setTripData(null);
   };
 
-  // Verificar se temos dados completos
   const hasCompleteTripData = () => {
     return tripData && tripData.departure && tripData.destination;
   };
 
-  // Carregar dados na inicialização
   useEffect(() => {
     loadTripData();
   }, []);

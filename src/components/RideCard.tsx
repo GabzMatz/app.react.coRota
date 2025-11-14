@@ -31,17 +31,14 @@ export const RideCard: React.FC<RideCardProps> = ({
   onCancel,
   onClick
 }) => {
-  // Função para obter foto padrão quando não há foto do motorista
   const getDriverPhoto = (photo: string | undefined, name: string) => {
     if (photo && photo.trim() !== '') {
       return photo;
     }
-    // Foto padrão baseada nas iniciais do nome
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=3b82f6&color=ffffff&size=56`;
   };
 
-  // Função para obter cor e texto do status
   const getStatusConfig = (status?: string) => {
     switch (status) {
       case RideStatus.COMPLETED:
@@ -77,14 +74,12 @@ export const RideCard: React.FC<RideCardProps> = ({
     <Card className={`mx-4 p-1 ${clickableClasses}`} onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-4">
-          {/* Horários e linha vertical */}
           <div className="flex items-center gap-4">
             <div className="text-right text-black">
               <div className="text-xl font-semibold text-black">{departureTime}</div>
               <div className="text-base text-black">Partida</div>
             </div>
             
-            {/* Linha vertical */}
             <div className="flex flex-col items-center gap-1">
               <div className="w-0.5 h-6 bg-gray-300"></div>
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -96,7 +91,6 @@ export const RideCard: React.FC<RideCardProps> = ({
               <div className="text-base text-black">Chegada</div>
             </div>
           </div>
-          {/* Data e preço */}
           <div className="text-right text-black">
             <div className="text-base  text-black">{date}</div>
             <div className="text-xl font-bold text-black">{price}</div>
@@ -104,7 +98,6 @@ export const RideCard: React.FC<RideCardProps> = ({
           
         </div>
         
-        {/* Motorista */}
         <div className="flex items-center justify-between gap-5 mt-2 mb-1">
           <div className="flex items-center gap-5">
             <img 
@@ -124,7 +117,6 @@ export const RideCard: React.FC<RideCardProps> = ({
             </div>
           </div>
           
-          {/* Botões de ação */}
           {isPending && (
             <div className="flex items-center justify-center gap-2">
               <button

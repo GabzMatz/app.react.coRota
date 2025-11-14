@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { RidesList } from './pages/RidesList';
 import { SearchPage } from './pages/SearchPage';
@@ -95,16 +94,14 @@ function AppContent() {
   const [selectedDriverRide, setSelectedDriverRide] = useState<BookedRide | null>(null);
   const [driverPassengers, setDriverPassengers] = useState<DriverPassengerInfo[]>([]);
   const [loadingDriverPassengers, setLoadingDriverPassengers] = useState(false);
-  // Create flow selections
-  const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
-  const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
+  const [createDate, setCreateDate] = useState<string | null>(null);
+  const [createTime, setCreateTime] = useState<string | null>(null);
   const [createSeats, setCreateSeats] = useState<number | null>(null);
   const [editingRideId, setEditingRideId] = useState<string | null>(null);
   const [editInitialDeparture, setEditInitialDeparture] = useState<string>('');
   const [editInitialDestination, setEditInitialDestination] = useState<string>('');
-  const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
-  const [editPassengerIds, setEditPassengerIds] = useState<string[]>([]);
-  // price is passed directly to handler; no need to store separately
+    const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
+    const [editPassengerIds, setEditPassengerIds] = useState<string[]>([]);
 
   const resetCreateFlow = useCallback(() => {
     setCreateStep('departure');
@@ -209,7 +206,6 @@ function AppContent() {
     
     setBookedRides(prev => [...prev, newBooking]);
     
-    // Voltar para a aba de rotas após confirmar
     setActiveTab('routes');
     setCurrentPage('search');
   };
@@ -218,13 +214,11 @@ function AppContent() {
     const userRaw = localStorage.getItem('authUser');
     const cached = userRaw ? JSON.parse(userRaw) : null;
     if (cached?.id) return cached.id as string;
-    // Fallback: fetch from API and cache
     const me = await userService.getMe();
     localStorage.setItem('authUser', JSON.stringify({ id: me.id, email: me.email }));
     return me.id;
   }, []);
 
-  // Função auxiliar para fazer reverse geocoding usando Photon
   const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     try {
       const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
@@ -237,7 +231,6 @@ function AppContent() {
         return 'Endereço não disponível';
       }
       
-      // Montar endereço a partir das propriedades
       const parts = [];
       if (props.name) parts.push(props.name);
       if (props.street) parts.push(props.street);
@@ -274,12 +267,10 @@ function AppContent() {
         });
       };
 
-      // Formatar preço
       const formatPrice = (price: number) => {
         return `R$ ${price.toFixed(2).replace('.', ',')}`;
       };
 
-      // Buscar dados de todos os motoristas únicos primeiro
       const uniqueDriverIds = [...new Set(history.map((item: any) => item.ride.driverId).filter(Boolean))];
       
       const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
@@ -294,34 +285,28 @@ function AppContent() {
 
       const driverDataResults = await Promise.all(driverDataPromises);
       
-      // Criar um mapa de driverId -> driverData para acesso rápido
       const driverMap = new Map(
         driverDataResults
           .filter(result => result.driverData)
           .map(result => [result.driverId, result.driverData])
       );
 
-      // Transformar dados da API para o formato esperado
       const transformedRidesPromises = history.map(async (item: any) => {
         const ride = item.ride;
         
-        // Usar startTime e endTime se disponíveis, senão usar time
         const departureTime = ride.startTime || ride.time || '--:--';
         const arrivalTime = ride.endTime || '--:--';
 
-        // Fazer reverse geocoding para obter endereços
         const [departureAddress, arrivalAddress] = await Promise.all([
           reverseGeocode(ride.departureLatLng[0], ride.departureLatLng[1]),
           reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
         ]);
 
-        // Obter timestamp da data da corrida para ordenação
         const rideDateValue = parseDateInput(ride.date);
         let sortDateTimestamp: number;
         if (rideDateValue) {
           sortDateTimestamp = rideDateValue.getTime();
         } else {
-          // Fallback para data de criação se não houver data da corrida
           const createdAt = item.createdAt;
           const createdAtDate = parseDateInput(createdAt);
           if (createdAtDate) {
@@ -332,7 +317,6 @@ function AppContent() {
         }
         const rideDateDisplay = formatDateDisplay(rideDateValue);
 
-        // Buscar dados do motorista
         const driverData = driverMap.get(ride.driverId);
         const driverName = driverData 
           ? `${driverData.firstName} ${driverData.lastName}`.trim()
@@ -463,7 +447,6 @@ function AppContent() {
     setDriverPassengers([]);
   };
 
-  // Carregar histórico de corridas quando a aba "routes" for ativada
   useEffect(() => {
     if (activeTab === 'routes') {
       fetchRideHistory();
@@ -476,7 +459,6 @@ function AppContent() {
     }
   }, [activeTab, fetchRideHistory]);
 
-  // Carregar as 3 últimas corridas concluídas para exibir na tela inicial
   useEffect(() => {
     const loadCompletedRides = async () => {
       if ((activeTab === 'search' || currentPage === 'search') && isAuthenticated) {
@@ -497,12 +479,10 @@ function AppContent() {
             });
           };
 
-          // Filtrar apenas corridas concluídas
           const completedItems = history.filter((item: any) => 
             item.status === 'completed' || item.status === RideStatus.COMPLETED
           );
 
-          // Buscar dados de todos os motoristas únicos primeiro
           const uniqueDriverIds = [...new Set(completedItems.map((item: any) => item.ride.driverId).filter(Boolean))];
           
           const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
@@ -517,24 +497,20 @@ function AppContent() {
 
           const driverDataResults = await Promise.all(driverDataPromises);
           
-          // Criar um mapa de driverId -> driverData para acesso rápido
           const driverMap = new Map(
             driverDataResults
               .filter(result => result.driverData)
               .map(result => [result.driverId, result.driverData])
           );
 
-          // Transformar dados da API para o formato esperado
           const transformedRidesPromises = completedItems.map(async (item: any) => {
             const ride = item.ride;
             
-            // Fazer reverse geocoding para obter endereços
             const [departureAddress, arrivalAddress] = await Promise.all([
               reverseGeocode(ride.departureLatLng[0], ride.departureLatLng[1]),
               reverseGeocode(ride.destinationLatLng[0], ride.destinationLatLng[1])
             ]);
 
-            // Obter timestamp da data da corrida para ordenação
             const rideDateValue = parseDateInput(ride.date);
             let sortDateTimestamp: number;
             if (rideDateValue) {
@@ -546,7 +522,6 @@ function AppContent() {
                 : new Date().getTime();
             }
 
-            // Buscar dados do motorista
             const driverData = driverMap.get(ride.driverId);
             const driverName = driverData 
               ? `${driverData.firstName} ${driverData.lastName}`.trim()
@@ -584,11 +559,10 @@ function AppContent() {
 
           const transformedRides = await Promise.all(transformedRidesPromises);
           
-          // Ordenar por data (mais recente primeiro) e pegar apenas as 3 primeiras
           const sortedRides = transformedRides.sort((a, b) => {
             const dateA = a.sortDate || 0;
             const dateB = b.sortDate || 0;
-            return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+            return dateB - dateA;
           });
           
           const top3Rides = sortedRides.slice(0, 3);
@@ -610,29 +584,24 @@ function AppContent() {
 
   const handleEditRide = async (rideId: string) => {
     try {
-      // Buscar dados da corrida
       const rideData = await rideService.getRideById(rideId);
       setEditingRideId(rideId);
 
-      // Converter timestamp do Firestore para data se necessário
       const rideDate = parseDateInput(rideData.date);
       if (!rideDate) {
         throw new Error('Data da corrida inválida.');
       }
 
-      // Formatar data para YYYY-MM-DD
       const year = rideDate.getFullYear();
       const month = String(rideDate.getMonth() + 1).padStart(2, '0');
       const day = String(rideDate.getDate()).padStart(2, '0');
       const formattedDate = `${year}-${month}-${day}`;
 
-      // Fazer reverse geocoding para obter endereços
       const [departureAddress, destinationAddress] = await Promise.all([
         reverseGeocode(rideData.departureLatLng[0], rideData.departureLatLng[1]),
         reverseGeocode(rideData.destinationLatLng[0], rideData.destinationLatLng[1])
       ]);
 
-      // Salvar coordenadas no localStorage
       localStorage.setItem('selectedAddress', JSON.stringify({
         latitude: rideData.departureLatLng[0],
         longitude: rideData.departureLatLng[1],
@@ -645,7 +614,6 @@ function AppContent() {
         address: destinationAddress
       }));
 
-      // Preencher estados do fluxo de criação
       setCreateDate(formattedDate);
       setCreateTime(rideData.startTime || rideData.time || '');
       setCreateSeats(rideData.allSeats || rideData.availableSeats || 1);
@@ -654,7 +622,6 @@ function AppContent() {
       setEditInitialPrice(rideData.pricePerPassenger || null);
       setEditPassengerIds(Array.isArray(rideData.passengerIds) ? rideData.passengerIds : []);
 
-      // Navegar para o fluxo de criação na primeira etapa
       setCreateStep('departure');
       setActiveTab('create');
     } catch (error) {
@@ -665,10 +632,8 @@ function AppContent() {
 
   const handleCreateRide = async (price: number) => {
     try {
-      // Ensure driver id
       const driverId = await getDriverId();
 
-      // Read coordinates
       const departureRaw = localStorage.getItem('selectedAddress');
       const destinationRaw = localStorage.getItem('selectedDestination');
       if (!departureRaw || !destinationRaw) {
@@ -681,7 +646,6 @@ function AppContent() {
       const departure = JSON.parse(departureRaw);
       const destination = JSON.parse(destinationRaw);
 
-      // endTime somado à duração aproximada do Leaflet
       const endTime = computeEndTimeFromLeaflet(createTime);
 
       const payload = {
@@ -696,7 +660,6 @@ function AppContent() {
         passengerIds: editingRideId ? editPassengerIds : []
       };
 
-      // Verificar se está editando ou criando
       if (editingRideId) {
         await rideService.updateRide(editingRideId, payload);
         showSuccess('Carona atualizada com sucesso!');
@@ -705,7 +668,6 @@ function AppContent() {
         showSuccess('Carona criada com sucesso!');
       }
 
-      // Reset create flow
       resetCreateFlow();
       setActiveTab('routes');
       setCurrentPage('search');
@@ -739,7 +701,6 @@ function AppContent() {
 
   return (
     <RegisterProvider>
-        {/* Se não estiver autenticado, mostrar página de autenticação */}
         {!isAuthenticated ? (
         authMode === 'register' ? (
           registerStep === 1 ? (
@@ -765,7 +726,6 @@ function AppContent() {
           <LoginPage 
             onLoginSuccess={() => {
               setIsAuthenticated(true);
-              // Redirecionar para a tela de busca (início)
               setActiveTab('search');
               setCurrentPage('search');
             }} 
@@ -774,7 +734,6 @@ function AppContent() {
               setRegisterStep(1);
             }}
             onForgotPasswordClick={() => {
-              // TODO: Implementar a lógica de recuperação de senha
               console.log('Esqueceu a senha clicado');
             }}
           />
@@ -813,7 +772,6 @@ function AppContent() {
             />
           )}
           {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
-          {/* Adicione outras abas conforme necessário */}
         </>
         )}
       </RegisterProvider>

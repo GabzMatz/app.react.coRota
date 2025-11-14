@@ -27,7 +27,7 @@ export const SearchResultCard: React.FC<SearchResultCardProps> = ({
       className="bg-gray-100 rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={onSelect}
     >
-       {/* Header com horários e locais */}
+       
        <div className="flex items-center justify-between mb-5">
          <div className="flex items-center space-x-3">
            <div className="text-center">
@@ -53,7 +53,7 @@ export const SearchResultCard: React.FC<SearchResultCardProps> = ({
          </div>
        </div>
 
-      {/* Informações do motorista */}
+      
       <div className="flex items-center justify-between pt-2 border-t border-gray-200">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">

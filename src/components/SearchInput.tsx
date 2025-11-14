@@ -57,7 +57,6 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   const handleBlur = () => {
-    // Delay para permitir cliques nas sugestões
     setTimeout(() => {
       setIsFocused(false);
     }, 200);

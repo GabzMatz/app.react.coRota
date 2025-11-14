@@ -19,7 +19,6 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
     onTabChange?.(tab);
   };
 
-  // Calcular preço total
   const calculateTotalPrice = () => {
     if (!searchData || !rideDetails) return rideDetails?.price || 'R$ 0';
     
@@ -35,7 +34,6 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
       return;
     }
 
-    // Obter ID do usuário logado
     const authUserRaw = localStorage.getItem('authUser');
     
     if (!authUserRaw) {
@@ -55,10 +53,8 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
       setIsLoading(true);
       setError('');
 
-      // Fazer a requisição PUT para reservar a corrida
       await rideService.chooseRide(rideDetails.id, userId);
 
-      // Se chegou aqui, a reserva foi bem-sucedida
       if (onConfirmBooking && searchData) {
         onConfirmBooking(rideDetails, searchData);
       }
@@ -72,7 +68,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
+      
       <div className="flex items-center p-3 border-b border-gray-200">
         <button 
           onClick={onBack}
@@ -84,11 +80,11 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
       </div>
 
       <div className="px-4 py-4">
-        {/* Resumo da Carona */}
+        
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Detalhes da Carona</h2>
           
-          {/* Data e Horário */}
+          
           <div className="flex items-center mb-3">
             <Calendar className="w-5 h-5 text-blue-600 mr-3" />
             <span className="font-medium text-gray-900">{rideDetails.date}</span>
@@ -99,7 +95,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
             <span className="font-medium text-gray-900">{rideDetails.departureTime} - {rideDetails.arrivalTime}</span>
           </div>
 
-          {/* Rota */}
+          
           <div className="space-y-3">
             <div className="flex items-start">
               <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
@@ -122,7 +118,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
             </div>
           </div>
 
-           {/* Preço */}
+           
            <div className="mt-4 pt-4 border-t border-gray-200">
              <div className="flex justify-between items-center mb-2">
                <span className="text-gray-900 font-medium">Preço por passageiro</span>
@@ -141,7 +137,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
            </div>
         </div>
 
-        {/* Informações do Motorista */}
+        
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h3 className="text-md font-bold text-gray-900 mb-3">Motorista</h3>
           <div className="flex items-center">
@@ -172,14 +168,14 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
           </div>
         </div>
 
-        {/* Mensagem de erro */}
+        
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
 
-        {/* Botão Confirmar Reserva */}
+        
         <button 
           onClick={handleConfirmBooking}
           disabled={isLoading}

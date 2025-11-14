@@ -55,12 +55,10 @@ export const RidesList: React.FC<RidesListProps> = ({
     setRideToCancel(null);
   };
 
-  // Ordenar por data (mais recente primeiro) - mostrar todas as corridas, incluindo canceladas
   const activeRides = bookedRides.sort((a, b) => {
-    // Ordenar do mais recente para o mais antigo usando sortDate
     const dateA = a.sortDate || 0;
     const dateB = b.sortDate || 0;
-    return dateB - dateA; // Ordem decrescente (mais recente primeiro)
+    return dateB - dateA;
   });
 
   return (

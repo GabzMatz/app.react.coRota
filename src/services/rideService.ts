@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface CreateRideRequest {
   driverId: string;
   departureLatLng: [number, number];
   destinationLatLng: [number, number];
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  date: string;
+  startTime: string;
+  endTime: string;
   allSeats: number;
   pricePerPassenger: number;
   passengerIds: string[];

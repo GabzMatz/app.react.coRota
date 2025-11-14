@@ -62,7 +62,6 @@ export interface UserResponse {
 class UserService {
   private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
 
-  // Registrar novo usuário
   async registerUser(userData: UserRegisterRequest): Promise<UserRegisterResponse> {
     try {
       console.log('👤 Registrando usuário:', userData);
@@ -96,7 +95,6 @@ class UserService {
     }
   }
 
-  // Obter usuário logado a partir do token
   async getMe(): Promise<MeResponse> {
     const response = await fetch(`${this.baseURL}/users/me`, {
       method: 'GET',
@@ -112,7 +110,6 @@ class UserService {
     return data;
   }
 
-  // Obter usuário por ID
   async getUserById(userId: string): Promise<UserResponse> {
     const token = localStorage.getItem('authToken');
 

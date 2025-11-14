@@ -45,7 +45,7 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
+      
       <div className="flex items-center p-3">
         <button 
           onClick={onBack}
@@ -58,7 +58,7 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
         </div>
       </div>
 
-      {/* Contador de passageiros */}
+      
       <div className="flex items-center justify-center py-12">
         <button
           onClick={handleDecrement}
@@ -93,14 +93,14 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
         </button>
       </div>
 
-      {/* Linha separadora */}
+      
       <div className="px-6">
         <div className="border-t border-gray-200"></div>
       </div>
 
 
 
-      {/* Botão Continuar - Fixo na parte inferior */}
+      
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}

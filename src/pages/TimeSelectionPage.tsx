@@ -6,7 +6,7 @@ interface TimeSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onTimeSelected?: (time: string) => void;
-  initialTime?: string; // HH:mm
+  initialTime?: string;
 }
 
 export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({ 
@@ -43,7 +43,7 @@ export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header com botão voltar */}
+      
       <div className="flex items-center p-3">
         <button 
           onClick={onBack}
@@ -54,7 +54,7 @@ export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({
         <h1 className="text-xl font-bold text-gray-900">A que horas você vai buscar seus passageiros?</h1>
       </div>
 
-      {/* Seletor de horário principal */}
+      
       <div className="px-10 py-">
         <div className="text-center mb-8">
           <input
@@ -74,7 +74,7 @@ export const TimeSelectionPage: React.FC<TimeSelectionPageProps> = ({
         </div>
       </div>
 
-      {/* Botão Continuar - Fixo na parte inferior */}
+      
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleContinue}

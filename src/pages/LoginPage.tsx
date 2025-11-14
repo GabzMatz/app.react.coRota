@@ -46,7 +46,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onRegisterClick, 
         localStorage.setItem('authUser', JSON.stringify({ id: response.id, email: response.email }));
       }
       
-      // Login bem-sucedido
       onLoginSuccess();
     } catch (error) {
       console.error('Erro no login:', error);

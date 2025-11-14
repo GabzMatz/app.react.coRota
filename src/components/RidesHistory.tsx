@@ -14,7 +14,6 @@ interface RidesHistoryProps {
 
 export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = [], isLoading = false }) => {
   const handleRideClick = (rideId: string | number) => {
-    // TODO: Implementar a lógica de navegação para a corrida selecionada
     console.log('Clicou na corrida:', rideId);
   };
 
@@ -27,7 +26,6 @@ export const RidesHistory: React.FC<RidesHistoryProps> = ({ rides = [], isLoadin
     );
   }
 
-  // Não renderizar se não houver corridas
   if (!rides || rides.length === 0) {
     return null;
   }

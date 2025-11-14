@@ -25,7 +25,6 @@ const CompanyAutocomplete: React.FC<CompanyAutocompleteProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounce para evitar muitas requisições - busca após 3 caracteres
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (value.trim() && value.length >= 3) {
@@ -39,7 +38,6 @@ const CompanyAutocomplete: React.FC<CompanyAutocompleteProps> = ({
     return () => clearTimeout(timeoutId);
   }, [value]);
 
-  // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -118,21 +116,21 @@ const CompanyAutocomplete: React.FC<CompanyAutocompleteProps> = ({
         }`}
       />
       
-      {/* Loading indicator */}
+      
       {isLoading && (
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
         </div>
       )}
 
-      {/* Error message */}
+      
       {error && (
         <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-red-100 border border-red-300 rounded text-red-600 text-xs">
           {error}
         </div>
       )}
 
-      {/* Dropdown */}
+      
       {showDropdown && companies.length > 0 && (
         <div
           ref={dropdownRef}
@@ -163,7 +161,7 @@ const CompanyAutocomplete: React.FC<CompanyAutocompleteProps> = ({
         </div>
       )}
 
-      {/* No results */}
+      
       {showDropdown && !isLoading && companies.length === 0 && value.length >= 3 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
           <div className="px-4 py-3 text-gray-500 text-sm text-center">

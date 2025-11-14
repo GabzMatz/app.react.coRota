@@ -20,9 +20,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChang
     onPageChange?.('search-destination', data);
   };
 
-  // Transformar BookedRide[] para o formato esperado pelo RidesHistory
   const formattedRides = completedRides.map((ride) => {
-    // Truncar endereços se muito longos
     const truncateAddress = (address: string, maxLength: number = 30) => {
       if (!address) return '';
       if (address.length <= maxLength) return address;
@@ -33,7 +31,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChang
     const destination = truncateAddress(ride.rideDetails.arrivalAddress || 'Destino', 25);
     const route = `${departure} → ${destination}`;
     
-    // Formatar data: "Dia XX de Mês - X passageiros"
     const formattedDate = ride.rideDetails.date || '';
     const passengers = ride.rideDetails.maxPassengers - ride.rideDetails.availableSeats;
     const date = `${formattedDate}${passengers > 0 ? ` - ${passengers} ${passengers === 1 ? 'passageiro' : 'passageiros'}` : ''}`;

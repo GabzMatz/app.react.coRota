@@ -17,10 +17,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     onTabChange?.(tab);
   };
 
-  // Função para buscar endereço via reverse geocoding
   const getAddressFromCoordinates = async (lat: number, lon: number): Promise<string> => {
     try {
-      // Usar Photon para reverse geocoding (CORS-friendly)
       const response = await fetch(
         `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`
       );
@@ -51,20 +49,17 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     }
   };
 
-  // Função para transformar dados da API no formato esperado pela RideDetailsPage
   const transformRideData = async (ride: any) => {
     let departureAddress = 'Endereço não disponível';
     let departureLocation = 'Local de partida';
     let arrivalAddress = 'Endereço não disponível';
     let arrivalLocation = 'Local de destino';
     
-    // Para partida - usar coordenadas da corrida para buscar endereço
     if (ride.departureLatLng && ride.departureLatLng.length === 2) {
       try {
         departureAddress = await getAddressFromCoordinates(ride.departureLatLng[0], ride.departureLatLng[1]);
         departureLocation = departureAddress.split(',')[0] || departureLocation;
       } catch (e) {
-        // Fallback para endereços salvos do usuário
         const selectedDeparture = localStorage.getItem('selectedAddress');
         if (selectedDeparture) {
           try {
@@ -72,20 +67,17 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
             departureAddress = departureData.address || departureAddress;
             departureLocation = departureData.address?.split(',')[0] || departureLocation;
           } catch (e2) {
-            // Se falhar tudo, usar coordenadas
             departureAddress = `${ride.departureLatLng[0].toFixed(6)}, ${ride.departureLatLng[1].toFixed(6)}`;
           }
         }
       }
     }
     
-    // Para destino - usar coordenadas da corrida para buscar endereço
     if (ride.destinationLatLng && ride.destinationLatLng.length === 2) {
       try {
         arrivalAddress = await getAddressFromCoordinates(ride.destinationLatLng[0], ride.destinationLatLng[1]);
         arrivalLocation = arrivalAddress.split(',')[0] || arrivalLocation;
       } catch (e) {
-        // Fallback para endereços salvos do usuário
         const selectedDestination = localStorage.getItem('selectedDestination');
         if (selectedDestination) {
           try {
@@ -93,7 +85,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
             arrivalAddress = destinationData.address || arrivalAddress;
             arrivalLocation = destinationData.address?.split(',')[0] || arrivalLocation;
           } catch (e2) {
-            // Se falhar tudo, usar coordenadas
             arrivalAddress = `${ride.destinationLatLng[0].toFixed(6)}, ${ride.destinationLatLng[1].toFixed(6)}`;
           }
         }
@@ -107,14 +98,12 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       arrivalTime: formatTime(ride.endTime),
       departureLocation: ride.departureLocation || departureLocation,
       departureAddress: ride.departureAddress || departureAddress,
-      // departureDistance: 'Distância não calculada', // Mockado - comentado por enquanto
       arrivalLocation: ride.arrivalLocation || arrivalLocation,
       arrivalAddress: ride.destinationAddress || arrivalAddress,
-      // arrivalDistance: 'Distância não calculada', // Mockado - comentado por enquanto
       price: formatPrice(ride.pricePerPassenger),
       driverName: ride.driverName || `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
       driverPhone: ride.driverPhone,
-      driverRating: '5,0', // Valor padrão, pode vir da API no futuro
+      driverRating: '5,0',
       driverPhoto: ride.driverPhoto,
       maxPassengers: ride.allSeats || ride.availableSeats || 4
     };
@@ -127,7 +116,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       onPageChange?.('ride-details', transformedRide);
     } catch (error) {
       console.error('Erro ao transformar dados da carona:', error);
-      // Em caso de erro, usar dados básicos
       const basicRide = {
         id: ride.id || ride._id || 0,
         date: formatDate(ride.date),
@@ -135,10 +123,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
         arrivalTime: formatTime(ride.endTime),
         departureLocation: 'Local de partida',
         departureAddress: 'Endereço não disponível',
-        // departureDistance: 'Distância não calculada', // Mockado - comentado por enquanto
         arrivalLocation: 'Local de destino',
         arrivalAddress: 'Endereço não disponível',
-        // arrivalDistance: 'Distância não calculada', // Mockado - comentado por enquanto
         price: formatPrice(ride.pricePerPassenger),
         driverName: ride.driverName || `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
         driverPhone: ride.driverPhone,
@@ -150,7 +136,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     }
   };
 
-  // Buscar dados dos motoristas quando as corridas mudarem
   useEffect(() => {
     const fetchDriverData = async () => {
       if (!rides || rides.length === 0) {
@@ -161,10 +146,8 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       setLoadingDrivers(true);
       
       try {
-        // Buscar dados de todos os motoristas únicos
         const uniqueDriverIds = [...new Set(rides.map(ride => ride.driverId).filter(Boolean))];
         
-        // Fazer requisições em paralelo para todos os motoristas
         const driverDataPromises = uniqueDriverIds.map(async (driverId) => {
           try {
             const driverData = await userService.getUserById(driverId);
@@ -177,14 +160,12 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
 
         const driverDataResults = await Promise.all(driverDataPromises);
         
-        // Criar um mapa de driverId -> driverData para acesso rápido
         const driverMap = new Map(
           driverDataResults
             .filter(result => result.driverData)
             .map(result => [result.driverId, result.driverData])
         );
 
-        // Combinar dados das corridas com dados dos motoristas
         const ridesWithData = rides.map(ride => {
           const driverData = driverMap.get(ride.driverId);
           
@@ -197,7 +178,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
             };
           }
           
-          // Se não encontrar dados do motorista, usar fallback
           return {
             ...ride,
             driverName: `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
@@ -209,7 +189,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
         setRidesWithDriverData(ridesWithData);
       } catch (error) {
         console.error('Erro ao buscar dados dos motoristas:', error);
-        // Em caso de erro, usar os dados originais sem informações do motorista
         setRidesWithDriverData(rides.map(ride => ({
           ...ride,
           driverName: `Motorista ${ride.driverId?.substring(0, 6) || 'N/A'}`,
@@ -223,16 +202,13 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     fetchDriverData();
   }, [rides]);
 
-  // Função para converter timestamp do Firestore para Date
   const convertFirestoreTimestamp = (timestamp: any): Date | null => {
     if (!timestamp) return null;
     
-    // Se for um objeto Firestore com _seconds
     if (timestamp._seconds !== undefined) {
       return new Date(timestamp._seconds * 1000);
     }
     
-    // Se for uma string de data
     if (typeof timestamp === 'string') {
       const date = new Date(timestamp);
       if (!isNaN(date.getTime())) {
@@ -240,7 +216,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       }
     }
     
-    // Se for um número (timestamp em milissegundos)
     if (typeof timestamp === 'number') {
       return new Date(timestamp);
     }
@@ -248,7 +223,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     return null;
   };
 
-  // Função para formatar data
   const formatDate = (dateInput: any): string => {
     const date = convertFirestoreTimestamp(dateInput);
     
@@ -264,16 +238,13 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     }
   };
 
-  // Função para formatar hora (HH:mm)
   const formatTime = (timeString: string | undefined): string => {
     if (!timeString) return '--:--';
     
-    // Se já estiver no formato HH:mm, retornar como está
     if (/^\d{2}:\d{2}$/.test(timeString)) {
       return timeString;
     }
     
-    // Tentar extrair hora e minuto de diferentes formatos
     const match = timeString.match(/(\d{1,2}):(\d{2})/);
     if (match) {
       const hours = match[1].padStart(2, '0');
@@ -284,7 +255,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     return timeString;
   };
 
-  // Função para formatar preço
   const formatPrice = (price: number | string | undefined): string => {
     if (!price) return 'R$ --';
     
@@ -294,8 +264,6 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
     return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
   };
 
-  // Usar dados das corridas com informações dos motoristas
-  // Só exibir os cards quando não estiver carregando e tiver dados dos motoristas
   const displayRides = loadingDrivers ? [] : (ridesWithDriverData.length > 0 ? ridesWithDriverData : rides);
 
   return (
