@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from './Card';
 import { Edit, X } from 'lucide-react';
 import { RideStatus } from '../types';
+import { getInitials } from '../utils/avatar';
 
 interface RideCardProps {
   departureTime: string;
@@ -35,7 +36,7 @@ export const RideCard: React.FC<RideCardProps> = ({
     if (photo && photo.trim() !== '') {
       return photo;
     }
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const initials = getInitials(name);
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=3b82f6&color=ffffff&size=56`;
   };
 

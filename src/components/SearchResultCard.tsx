@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin} from 'lucide-react';
+import { getInitials } from '../utils/avatar';
 
 interface SearchResultCardProps {
   departureTime: string;
@@ -65,7 +66,7 @@ export const SearchResultCard: React.FC<SearchResultCardProps> = ({
               />
             ) : (
               <span className="text-gray-600 font-medium text-sm">
-                {driverName.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                {getInitials(driverName)}
               </span>
             )}
           </div>
