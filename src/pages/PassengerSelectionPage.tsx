@@ -7,28 +7,29 @@ interface PassengerSelectionPageProps {
   onBack?: () => void;
   onPassengerSelected?: (count: number) => void;
   initialCount?: number;
+  maxCount?: number;
 }
 
 export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({ 
   onTabChange, 
   onBack, 
   onPassengerSelected,
-  initialCount
+  initialCount,
+  maxCount = 4
 }) => {
-  const [passengerCount, setPassengerCount] = useState(initialCount || 2);
+  const [passengerCount, setPassengerCount] = useState(initialCount || 1);
   
   useEffect(() => {
-    if (initialCount) {
-      setPassengerCount(initialCount);
-    }
-  }, [initialCount]);
+    const safeInitial = initialCount || 1;
+    setPassengerCount(Math.min(Math.max(1, safeInitial), maxCount));
+  }, [initialCount, maxCount]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
 
   const handleIncrement = () => {
-    if (passengerCount < 4) {
+    if (passengerCount < maxCount) {
       setPassengerCount(passengerCount + 1);
     }
   };
@@ -80,10 +81,10 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
 
          <button
            onClick={handleIncrement}
-           disabled={passengerCount >= 4}
+           disabled={passengerCount >= maxCount}
            className={`
              w-12 h-12 rounded-full flex items-center justify-center transition-colors
-             ${passengerCount >= 4 
+             ${passengerCount >= maxCount 
                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                : 'bg-blue-600 text-white hover:bg-blue-700'
              }
@@ -96,6 +97,7 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
       
       <div className="px-6">
         <div className="border-t border-gray-200"></div>
+        <p className="text-sm text-gray-500 mt-3">Maximo permitido para sua vaga: {maxCount} passageiro(s)</p>
       </div>
 
 

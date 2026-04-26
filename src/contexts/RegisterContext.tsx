@@ -10,7 +10,11 @@ export interface RegisterData {
   nomeCompleto: string;
   telefone: string;
   possuiCarro: string;
-  dadosCarro: string;
+  marcaCarro: string;
+  modeloCarro: string;
+  placaCarro: string;
+  corCarro: string;
+  assentosCarro: string;
   nomeUsuario: string;
   senha: string;
   confirmarSenha: string;
@@ -42,7 +46,11 @@ const initialData: RegisterData = {
   nomeCompleto: '',
   telefone: '',
   possuiCarro: '',
-  dadosCarro: '',
+  marcaCarro: '',
+  modeloCarro: '',
+  placaCarro: '',
+  corCarro: '',
+  assentosCarro: '',
   nomeUsuario: '',
   senha: '',
   confirmarSenha: '',

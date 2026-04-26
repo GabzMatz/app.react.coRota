@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 export interface CompanySearchRequest {
   name: string;
 }
@@ -24,7 +26,7 @@ export interface CompanyError {
 }
 
 class CompanyService {
-  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  private baseURL = API_BASE_URL;
   
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('authToken');

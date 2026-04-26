@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 export interface LoginRequest {
   corporateEmail: string;
   password: string;
@@ -15,7 +17,7 @@ export interface AuthError {
 }
 
 class AuthService {
-  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  private baseURL = API_BASE_URL;
   private tokenTimestampKey = 'authTokenIssuedAt';
   private tokenValidityMs = 60 * 60 * 1000;
 

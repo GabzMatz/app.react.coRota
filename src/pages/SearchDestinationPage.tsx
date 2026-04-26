@@ -19,13 +19,14 @@ interface SearchDestinationPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onContinue?: (rides: any[]) => void;
-  searchData?: { departure: string; passengers: number };
+  searchData?: { departure: string; passengers: number | null; date: string | null };
 }
 
 export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({ 
   onTabChange, 
   onBack, 
-  onContinue
+  onContinue,
+  searchData
 }) => {
   const { showError } = useToast();
   const [destination, setDestination] = useState('');
@@ -131,10 +132,25 @@ export const SearchDestinationPage: React.FC<SearchDestinationPageProps> = ({
       const response = await rideService.suggestRides({
         departureLatLng: [Number(departure.latitude), Number(departure.longitude)] as [number, number],
         destinationLatLng: [Number(destination.latitude), Number(destination.longitude)] as [number, number],
+        minimumAvailableSeats: searchData?.passengers ?? undefined,
+        date: searchData?.date ?? null,
         userId
       });
 
-      const rides = response.data || [];
+      const rides = (response.data || []).filter((ride) => {
+        if (searchData?.passengers !== null && searchData?.passengers !== undefined) {
+          const hasEnoughSeats = (ride.availableSeats ?? 0) >= searchData.passengers;
+          if (!hasEnoughSeats) {
+            return false;
+          }
+        }
+
+        if (!searchData?.date) {
+          return true;
+        }
+
+        return String(ride.date) === searchData.date;
+      });
       onContinue?.(rides);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao buscar corridas sugeridas';

@@ -13,7 +13,11 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     nomeCompleto: '',
     telefone: '',
     possuiCarro: '',
-    dadosCarro: '',
+    marcaCarro: '',
+    modeloCarro: '',
+    placaCarro: '',
+    corCarro: '',
+    assentosCarro: '',
     nomeUsuario: '',
     senha: '',
     confirmarSenha: ''
@@ -45,7 +49,11 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
 
   const handleInputChangeWithCarLogic = (data: Record<string, string>) => {
     if (data.possuiCarro === 'Não') {
-      data.dadosCarro = '';
+      data.marcaCarro = '';
+      data.modeloCarro = '';
+      data.placaCarro = '';
+      data.corCarro = '';
+      data.assentosCarro = '';
     }
     
     updateValidations(data);
@@ -57,7 +65,11 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
       nomeCompleto: data.nomeCompleto,
       telefone: data.telefone,
       possuiCarro: data.possuiCarro,
-      dadosCarro: data.dadosCarro,
+      marcaCarro: data.marcaCarro,
+      modeloCarro: data.modeloCarro,
+      placaCarro: data.placaCarro,
+      corCarro: data.corCarro,
+      assentosCarro: data.assentosCarro,
       nomeUsuario: data.nomeUsuario,
       senha: data.senha,
       confirmarSenha: data.confirmarSenha
@@ -72,7 +84,11 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     setIsCarDataDisabled(!hasCar);
     
     if (!hasCar) {
-      data.dadosCarro = '';
+      data.marcaCarro = '';
+      data.modeloCarro = '';
+      data.placaCarro = '';
+      data.corCarro = '';
+      data.assentosCarro = '';
     }
     
     handleInputChangeWithCarLogic(data);
@@ -101,10 +117,42 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
       required: true
     },
     {
-      name: 'dadosCarro',
-      label: 'Dados do Carro (Modelo, cor, placa)',
+      name: 'marcaCarro',
+      label: 'Marca do veículo',
       type: 'text',
-      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: Chevrolet Onix Prata, ABC-1234',
+      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: Chevrolet',
+      required: false,
+      disabled: isCarDataDisabled
+    },
+    {
+      name: 'modeloCarro',
+      label: 'Modelo do veículo',
+      type: 'text',
+      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: Onix',
+      required: false,
+      disabled: isCarDataDisabled
+    },
+    {
+      name: 'placaCarro',
+      label: 'Placa do veículo',
+      type: 'text',
+      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: ABC1D23',
+      required: false,
+      disabled: isCarDataDisabled
+    },
+    {
+      name: 'corCarro',
+      label: 'Cor do veículo',
+      type: 'text',
+      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: Prata',
+      required: false,
+      disabled: isCarDataDisabled
+    },
+    {
+      name: 'assentosCarro',
+      label: 'Quantidade de assentos',
+      type: 'number',
+      placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: 5',
       required: false,
       disabled: isCarDataDisabled
     },

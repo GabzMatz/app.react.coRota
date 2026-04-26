@@ -5,7 +5,7 @@ import { BottomNav } from '../components/BottomNav';
 interface PriceSelectionPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
-  onPriceSelected?: (price: number) => void;
+  onPriceSelected?: (price: number) => void | Promise<void>;
   initialPrice?: number;
 }
 
@@ -16,6 +16,7 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
   initialPrice
 }) => {
   const [price, setPrice] = useState(initialPrice || 20);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     if (initialPrice) {
@@ -39,8 +40,17 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
     }
   };
 
-  const handleOfferRide = () => {
-    onPriceSelected?.(price);
+  const handleOfferRide = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await onPriceSelected?.(price);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -96,9 +106,10 @@ export const PriceSelectionPage: React.FC<PriceSelectionPageProps> = ({
       <div className="fixed bottom-20 left-0 right-0 px-6 bg-white py-4">
         <button
           onClick={handleOfferRide}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          disabled={isSubmitting}
+          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Oferecer carona
+          {isSubmitting ? 'Enviando...' : 'Oferecer carona'}
         </button>
       </div>
 

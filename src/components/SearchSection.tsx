@@ -12,21 +12,29 @@ interface AddressResult {
 }
 
 interface SearchSectionProps {
-  onSearch?: (searchData: { departure: string; passengers: number }) => void;
+  onSearch?: (searchData: { departure: string; passengers: number | null; date: string | null }) => void;
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
   const { showError } = useToast();
   const [departure, setDeparture] = useState('');
-  const [passengers, setPassengers] = useState(1);
+  const [passengers, setPassengers] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
   const [hasSelectedAddress, setHasSelectedAddress] = useState(false);
 
   const incrementPassengers = () => {
-    setPassengers(prev => Math.min(4, prev + 1));
+    setPassengers(prev => {
+      if (prev === null) return 1;
+      return Math.min(4, prev + 1);
+    });
   };
 
   const decrementPassengers = () => {
-    setPassengers(prev => Math.max(1, prev - 1));
+    setPassengers(prev => {
+      if (prev === null) return null;
+      if (prev <= 1) return null;
+      return prev - 1;
+    });
   };
 
   const handleAddressSelect = (address: AddressResult) => {
@@ -86,11 +94,17 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
             )}
           </div>
 
-          
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center text-blue-600">
+          {/* Linha com Calendário e Passageiros */}
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <div className="flex items-center text-blue-600 min-w-0">
               <Calendar className="w-5 h-5 mr-2" />
-              <span className="font-medium">Calendário</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 w-full"
+                min={new Date().toISOString().split('T')[0]}
+              />
             </div>
             
             <div className="flex items-center space-x-2">
@@ -102,7 +116,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
               </button>
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1" />
-                <span className="text-sm">{passengers}</span>
+                <span className="text-sm">{passengers ?? 'Qualquer'}</span>
               </div>
               <button 
                 onClick={incrementPassengers}
@@ -133,14 +147,19 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ onSearch }) => {
                   showError('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
                   return;
                 }
-              } catch (error) {
+              } catch {
                 showError('Endereço de partida inválido. Por favor, selecione um endereço da lista de sugestões.');
                 return;
               }
 
               localStorage.setItem('searchDeparture', departure);
-              localStorage.setItem('searchPassengers', String(passengers));
-              onSearch?.({ departure, passengers });
+              if (passengers === null) {
+                localStorage.removeItem('searchPassengers');
+              } else {
+                localStorage.setItem('searchPassengers', String(passengers));
+              }
+              localStorage.setItem('searchDate', selectedDate || '');
+              onSearch?.({ departure, passengers, date: selectedDate || null });
             }}
             className={`w-full py-3 rounded-lg font-medium transition-colors ${
               !hasSelectedAddress || !departure.trim()

@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 export interface AddressCreateRequest {
   street: string;
   number: string;
@@ -56,7 +58,7 @@ export interface AddressError {
 }
 
 class AddressService {
-  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  private baseURL = API_BASE_URL;
   
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('authToken');

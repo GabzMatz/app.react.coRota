@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { API_BASE_URL } from '../config/api';
 
 export interface UserRegisterRequest {
   corporateEmail: string;
@@ -11,6 +12,9 @@ export interface UserRegisterRequest {
   addressId: string;
   hasCar: boolean;
   isActive: boolean;
+  carInfo?: string;
+  carSeats?: number;
+  photo?: string;
 }
 
 export interface UserRegisterResponse {
@@ -52,6 +56,8 @@ export interface UserResponse {
   hasCar: boolean;
   isActive: boolean;
   carInfo?: string;
+  carSeats?: number;
+  photo?: string;
   id: string;
   createdAt: {
     _seconds: number;
@@ -60,7 +66,33 @@ export interface UserResponse {
 }
 
 class UserService {
-  private baseURL = 'https://us-central1-corota-fe133.cloudfunctions.net/api';
+  private baseURL = API_BASE_URL;
+
+  private isLegacyUserValidationError(errorData: unknown): boolean {
+    const message = (errorData as { message?: unknown })?.message;
+    const validationMessage = (errorData as { validation?: { body?: { message?: unknown } } })?.validation?.body?.message;
+    const validationKeys = (errorData as { validation?: { body?: { keys?: unknown } } })?.validation?.body?.keys;
+    const keys = Array.isArray(validationKeys) ? validationKeys : [];
+    const hasCorporateEmailKey = keys.includes('corporateEmail');
+
+    return (
+      (typeof message === 'string' && message.includes('Validation failed')) &&
+      (
+        hasCorporateEmailKey ||
+        (typeof validationMessage === 'string' && validationMessage.includes('"corporateEmail" is required'))
+      )
+    );
+  }
+
+  private isEmptyCarInfoValidationError(errorData: unknown): boolean {
+    const validationMessage = (errorData as { validation?: { body?: { message?: unknown } } })?.validation?.body?.message;
+    return typeof validationMessage === 'string' && validationMessage.includes('"carInfo" is not allowed to be empty');
+  }
+
+  private isPhotoNotAllowedValidationError(errorData: unknown): boolean {
+    const validationMessage = (errorData as { validation?: { body?: { message?: unknown } } })?.validation?.body?.message;
+    return typeof validationMessage === 'string' && validationMessage.includes('"photo" is not allowed');
+  }
 
   async registerUser(userData: UserRegisterRequest): Promise<UserRegisterResponse> {
     try {
@@ -128,6 +160,94 @@ class UserService {
 
     const data: UserResponse = await response.json();
     return data;
+  }
+
+  async updateProfile(userId: string, payload: Partial<Pick<UserResponse, 'phone' | 'photo' | 'carInfo' | 'carSeats'>>): Promise<{ message: string; photoSkipped?: boolean }> {
+    const token = localStorage.getItem('authToken');
+    let photoSkipped = false;
+    const normalizedPayload: Partial<Pick<UserResponse, 'phone' | 'photo' | 'carInfo' | 'carSeats'>> = {
+      ...(typeof payload.phone === 'string' ? { phone: payload.phone } : {}),
+      ...(typeof payload.photo === 'string' ? { photo: payload.photo } : {}),
+      ...(typeof payload.carInfo === 'string' ? { carInfo: payload.carInfo } : {}),
+      ...(typeof payload.carSeats === 'number' ? { carSeats: payload.carSeats } : {})
+    };
+
+    const sendUpdate = async (body: unknown) => {
+      const response = await fetch(`${this.baseURL}/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(body)
+      });
+      return response;
+    };
+
+    let response = await sendUpdate(normalizedPayload);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+
+      if (this.isPhotoNotAllowedValidationError(errorData) && typeof normalizedPayload.photo === 'string') {
+        const retryPayload = { ...normalizedPayload };
+        delete retryPayload.photo;
+        response = await sendUpdate(retryPayload);
+        photoSkipped = true;
+      } else if (this.isEmptyCarInfoValidationError(errorData) && normalizedPayload.carInfo === '') {
+        const retryPayload = { ...normalizedPayload };
+        delete retryPayload.carInfo;
+        delete retryPayload.carSeats;
+        response = await sendUpdate(retryPayload);
+      } else if (this.isLegacyUserValidationError(errorData)) {
+        const currentUser = await this.getUserById(userId);
+        const mergedCarInfo = payload.carInfo ?? currentUser.carInfo ?? '';
+        const mergedCarSeats = payload.carSeats ?? currentUser.carSeats;
+        const hasCar = Boolean(mergedCarInfo && mergedCarInfo.trim().length > 0);
+
+        const legacyPayload = {
+          corporateEmail: currentUser.corporateEmail,
+          cpf: currentUser.cpf,
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          phone: payload.phone ?? currentUser.phone,
+          companyId: currentUser.companyId,
+          addressId: currentUser.addressId,
+          hasCar,
+          ...(mergedCarInfo.trim().length > 0 ? { carInfo: mergedCarInfo } : {}),
+          ...(typeof mergedCarSeats === 'number' ? { carSeats: mergedCarSeats } : {}),
+          ...(typeof payload.photo === 'string' ? { photo: payload.photo } : {})
+        };
+
+        response = await sendUpdate(legacyPayload);
+
+        if (!response.ok) {
+          const legacyErrorData = await response.json().catch(() => ({}));
+          if (this.isPhotoNotAllowedValidationError(legacyErrorData) && 'photo' in legacyPayload) {
+            const legacyPayloadWithoutPhoto = { ...legacyPayload };
+            delete legacyPayloadWithoutPhoto.photo;
+            response = await sendUpdate(legacyPayloadWithoutPhoto);
+            photoSkipped = true;
+          } else {
+            throw new Error((legacyErrorData as { message?: string }).message || `Erro ${response.status}: ${response.statusText}`);
+          }
+        }
+      } else {
+        throw new Error((errorData as { message?: string }).message || `Erro ${response.status}: ${response.statusText}`);
+      }
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error((errorData as { message?: string }).message || `Erro ${response.status}: ${response.statusText}`);
+    }
+
+    const parsedResponse = await response.json().catch(() => ({}));
+    return {
+      ...(parsedResponse as { message?: string }),
+      message: (parsedResponse as { message?: string }).message || 'Perfil atualizado com sucesso!',
+      ...(photoSkipped ? { photoSkipped: true } : {})
+    };
   }
 }
 

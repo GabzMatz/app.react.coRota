@@ -90,7 +90,7 @@ export const RidesList: React.FC<RidesListProps> = ({
               role={booking.role}
               onEdit={() => handleEdit(booking.rideDetails.id || booking.id)}
               onCancel={() => handleCancel(booking.id)}
-              onClick={booking.role === 'driver' ? () => handleViewDetails(booking) : undefined}
+              onClick={() => handleViewDetails(booking)}
             />
           ))}
         </div>

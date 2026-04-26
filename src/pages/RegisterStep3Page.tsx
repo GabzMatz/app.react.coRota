@@ -103,6 +103,14 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
         telefoneLimpo: cleanPhone(completeData.telefone || '')
       });
 
+      const carInfo = [
+        `Marca: ${completeData.marcaCarro || ''}`,
+        `Modelo: ${completeData.modeloCarro || ''}`,
+        `Placa: ${completeData.placaCarro || ''}`,
+        `Cor: ${completeData.corCarro || ''}`
+      ].join(' | ');
+      const parsedCarSeats = Number(completeData.assentosCarro);
+
       const userRequest: UserRegisterRequest = {
         corporateEmail: completeData.email || '',
         cpf: cleanCPF(completeData.cpf || ''),
@@ -113,7 +121,9 @@ const RegisterStep3Page: React.FC<RegisterStep3PageProps> = ({ onComplete, onBac
         companyId: selectedCompany?.id || '',
         addressId: createdAddress.data.id || '',
         hasCar: completeData.possuiCarro === 'Sim',
-        isActive: true
+        isActive: true,
+        carInfo: completeData.possuiCarro === 'Sim' ? carInfo : '',
+        carSeats: completeData.possuiCarro === 'Sim' && !Number.isNaN(parsedCarSeats) ? parsedCarSeats : undefined
       };
 
       console.log('📤 Payload do usuário que será enviado para a API:', userRequest);

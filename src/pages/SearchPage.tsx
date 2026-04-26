@@ -16,7 +16,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onTabChange, onPageChang
     onTabChange?.(tab);
   };
 
-  const handleSearch = (data: { departure: string; passengers: number }) => {
+  const handleSearch = (data: { departure: string; passengers: number | null; date: string | null }) => {
     onPageChange?.('search-destination', data);
   };
 
