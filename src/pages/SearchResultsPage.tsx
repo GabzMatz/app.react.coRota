@@ -105,7 +105,10 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       driverPhone: ride.driverPhone,
       driverRating: '5,0',
       driverPhoto: ride.driverPhoto,
-      maxPassengers: ride.allSeats || ride.availableSeats || 4
+      maxPassengers: ride.allSeats || ride.availableSeats || 4,
+      availableSeats: ride.availableSeats ?? ride.allSeats ?? 1,
+      pickupMode: ride.pickupMode || 'meeting_point',
+      meetingPoint: ride.meetingPoint || null
     };
   };
 
@@ -130,7 +133,10 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
         driverPhone: ride.driverPhone,
         driverRating: '5,0',
         driverPhoto: ride.driverPhoto,
-        maxPassengers: ride.allSeats || ride.availableSeats || 4
+        maxPassengers: ride.allSeats || ride.availableSeats || 4,
+        availableSeats: ride.availableSeats ?? ride.allSeats ?? 1,
+        pickupMode: ride.pickupMode || 'meeting_point',
+        meetingPoint: ride.meetingPoint || null
       };
       onPageChange?.('ride-details', basicRide);
     }

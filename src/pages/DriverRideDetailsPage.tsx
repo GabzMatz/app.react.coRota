@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, MapPin, Users, Phone } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
-import type { AddressResponse } from '../services/addressService';
-import { addressService } from '../services/addressService';
 import type { BookedRide } from '../types';
-import { useToast } from '../contexts/ToastContext';
+import { getInitials } from '../utils/avatar';
 
 export interface DriverPassengerInfo {
   id: string;
   fullName: string;
   phone: string;
-  addressId?: string;
+  pickupAddress?: string;
+  photoUrl?: string | null;
 }
 
 interface DriverRideDetailsPageProps {
@@ -19,6 +18,7 @@ interface DriverRideDetailsPageProps {
   isLoadingPassengers: boolean;
   onBack: () => void;
   onTabChange?: (tab: string) => void;
+  onOpenPickupPlanner?: (rideId: string) => void;
 }
 
 export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
@@ -26,33 +26,21 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
   passengers,
   isLoadingPassengers,
   onBack,
-  onTabChange
+  onTabChange,
+  onOpenPickupPlanner
 }) => {
-  const { showError } = useToast();
   const [isPassengerModalOpen, setIsPassengerModalOpen] = useState(false);
   const [selectedPassenger, setSelectedPassenger] = useState<DriverPassengerInfo | null>(null);
-  const [selectedPassengerAddress, setSelectedPassengerAddress] = useState<AddressResponse | null>(null);
-  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const [addressCache, setAddressCache] = useState<Record<string, AddressResponse>>({});
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
 
-  const formatAddress = (address: AddressResponse | null) => {
-    if (!address) {
+  const formatPickupAddress = (pickupAddress?: string) => {
+    if (!pickupAddress || !pickupAddress.trim()) {
       return 'Endereço não disponível';
     }
-
-    const parts = [
-      [address.street, address.number].filter(Boolean).join(', '),
-      address.complement,
-      address.neighborhood,
-      `${address.city} - ${address.state}`,
-      address.zipCode ? `CEP ${address.zipCode}` : null
-    ].filter(Boolean);
-
-    return parts.join(' • ');
+    return pickupAddress;
   };
 
   const formatPhone = (phone?: string) => {
@@ -77,50 +65,18 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
 
   const handlePassengerClick = async (passenger: DriverPassengerInfo) => {
     setSelectedPassenger(passenger);
-    setSelectedPassengerAddress(null);
     setIsPassengerModalOpen(true);
-
-    const addressId = passenger.addressId;
-    if (!addressId) {
-      return;
-    }
-
-    const cachedAddress = addressCache[addressId];
-    if (cachedAddress) {
-      setSelectedPassengerAddress(cachedAddress);
-      return;
-    }
-
-    try {
-      setIsLoadingAddress(true);
-      const address = await addressService.getAddressById(addressId);
-      setAddressCache(prev => ({ ...prev, [addressId]: address }));
-      setSelectedPassengerAddress(address);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao carregar endereço do passageiro.';
-      showError(message);
-    } finally {
-      setIsLoadingAddress(false);
-    }
   };
 
   const closePassengerModal = () => {
     setIsPassengerModalOpen(false);
     setSelectedPassenger(null);
-    setSelectedPassengerAddress(null);
-    setIsLoadingAddress(false);
   };
 
-  const getPassengerInitials = (name: string) => {
-    const parts = name.trim().split(' ').filter(Boolean);
-    if (parts.length === 0) {
-      return '??';
-    }
-    if (parts.length === 1) {
-      return parts[0].slice(0, 2).toUpperCase();
-    }
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
+  useEffect(() => {
+    setIsPassengerModalOpen(false);
+    setSelectedPassenger(null);
+  }, [rideDetails]);
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -203,6 +159,21 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
 
         <div className="border-t border-gray-200 my-4"></div>
 
+        <section className="mb-4 rounded-lg border border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Plano de embarque</h2>
+          <p className="text-sm text-gray-600 mb-3">
+            Defina no mapa se sera ponto de encontro unico ou passagem nas ruas dos passageiros.
+          </p>
+          <button
+            onClick={() => rideDetails?.id && onOpenPickupPlanner?.(String(rideDetails.id))}
+            className="w-full rounded-lg bg-blue-600 text-white py-2 px-3 text-sm font-medium hover:bg-blue-700"
+          >
+            Abrir planejamento no mapa
+          </button>
+        </section>
+
+        <div className="border-t border-gray-200 my-4"></div>
+
         <section className="mb-4">
           <div className="flex items-center text-gray-600 mb-2">
             <Users className="w-5 h-5 mr-2" />
@@ -229,7 +200,11 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-semibold">
-                      {getPassengerInitials(passenger.fullName)}
+                      {passenger.photoUrl ? (
+                        <img src={passenger.photoUrl} alt={passenger.fullName} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        getInitials(passenger.fullName)
+                      )}
                     </div>
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-900">{passenger.fullName}</span>
@@ -263,7 +238,11 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
             </button>
             <div className="flex flex-col items-center gap-3">
               <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-semibold">
-                {getPassengerInitials(selectedPassenger.fullName)}
+                {selectedPassenger.photoUrl ? (
+                  <img src={selectedPassenger.photoUrl} alt={selectedPassenger.fullName} className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  getInitials(selectedPassenger.fullName)
+                )}
               </div>
               <div className="text-center">
                 <h3 className="text-xl font-semibold text-gray-900">{selectedPassenger.fullName}</h3>
@@ -276,16 +255,9 @@ export const DriverRideDetailsPage: React.FC<DriverRideDetailsPageProps> = ({
 
             <div className="mt-5">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Endereço</h4>
-              {isLoadingAddress ? (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  Carregando endereço...
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {formatAddress(selectedPassengerAddress)}
-                </p>
-              )}
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {formatPickupAddress(selectedPassenger.pickupAddress)}
+              </p>
             </div>
 
             {selectedPassenger.phone && (

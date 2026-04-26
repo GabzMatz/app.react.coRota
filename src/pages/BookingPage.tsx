@@ -1,29 +1,46 @@
-import React, { useState } from 'react';
-import { ArrowLeft, MapPin, Star, Users, Calendar, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, MapPin, Star, Users, Calendar, Clock, Minus, Plus } from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 import { rideService } from '../services/rideService';
+import { getInitials } from '../utils/avatar';
 
 interface BookingPageProps {
   rideDetails: any;
-  searchData?: { departure: string; passengers: number } | null;
+  searchData?: { departure: string; passengers: number | null; date: string | null } | null;
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
-  onConfirmBooking?: (rideDetails: any, searchData: { departure: string; passengers: number }) => void;
+  onConfirmBooking?: (rideDetails: any, searchData: { departure: string; passengers: number | null; date: string | null }) => void;
 }
 
 export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchData, onTabChange, onBack, onConfirmBooking }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const availableSeats = useMemo(() => {
+    const seats = Number(rideDetails?.availableSeats);
+    if (!Number.isFinite(seats) || seats <= 0) {
+      return 1;
+    }
+    return Math.floor(seats);
+  }, [rideDetails?.availableSeats]);
+  const initialSeats = useMemo(() => {
+    const requested = searchData?.passengers ?? 1;
+    return Math.max(1, Math.min(requested, availableSeats));
+  }, [searchData?.passengers, availableSeats]);
+  const [seatsToReserve, setSeatsToReserve] = useState(initialSeats);
+
+  useEffect(() => {
+    setSeatsToReserve(initialSeats);
+  }, [initialSeats]);
 
   const handleTabChange = (tab: string) => {
     onTabChange?.(tab);
   };
 
   const calculateTotalPrice = () => {
-    if (!searchData || !rideDetails) return rideDetails?.price || 'R$ 0';
+    if (!rideDetails) return 'R$ 0';
     
     const basePrice = parseFloat(rideDetails.price.replace('R$ ', '').replace(',', '.'));
-    const totalPrice = basePrice * searchData.passengers;
+    const totalPrice = basePrice * seatsToReserve;
     
     return `R$ ${totalPrice.toFixed(2).replace('.', ',')}`;
   };
@@ -53,10 +70,16 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
       setIsLoading(true);
       setError('');
 
-      await rideService.chooseRide(rideDetails.id, userId);
+      // Fazer a requisição PUT para reservar a corrida
+      await rideService.chooseRide(rideDetails.id, userId, seatsToReserve);
 
-      if (onConfirmBooking && searchData) {
-        onConfirmBooking(rideDetails, searchData);
+      // Se chegou aqui, a reserva foi bem-sucedida
+      if (onConfirmBooking) {
+        onConfirmBooking(rideDetails, {
+          departure: searchData?.departure || '',
+          date: searchData?.date || null,
+          passengers: seatsToReserve
+        });
       }
     } catch (err) {
       console.error('Erro ao confirmar reserva:', err);
@@ -124,14 +147,36 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
                <span className="text-gray-900 font-medium">Preço por passageiro</span>
                <span className="text-lg font-bold text-gray-900">{rideDetails.price}</span>
              </div>
-             {searchData && searchData.passengers > 1 && (
-               <div className="flex justify-between items-center">
-                 <span className="text-gray-600 text-sm">{searchData.passengers} passageiros</span>
-                 <span className="text-sm text-gray-600">× {rideDetails.price}</span>
+             <div className="flex justify-between items-center">
+               <span className="text-gray-600 text-sm">Vagas reservadas</span>
+               <div className="flex items-center gap-2">
+                 <button
+                   type="button"
+                   onClick={() => setSeatsToReserve(prev => Math.max(1, prev - 1))}
+                   disabled={seatsToReserve <= 1}
+                   className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center disabled:opacity-40"
+                 >
+                   <Minus className="w-3 h-3" />
+                 </button>
+                 <span className="text-sm text-gray-700 min-w-5 text-center">{seatsToReserve}</span>
+                 <button
+                   type="button"
+                   onClick={() => setSeatsToReserve(prev => Math.min(availableSeats, prev + 1))}
+                   disabled={seatsToReserve >= availableSeats}
+                   className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center disabled:opacity-40"
+                 >
+                   <Plus className="w-3 h-3" />
+                 </button>
                </div>
-             )}
+             </div>
+             <div className="flex justify-between items-center">
+               <span className="text-gray-600 text-sm">Cálculo</span>
+               <span className="text-sm text-gray-600">
+                 {`${seatsToReserve} × ${rideDetails.price}`}
+               </span>
+             </div>
              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
-               <span className="text-gray-900 font-bold">Preço Total</span>
+               <span className="text-gray-900 font-bold">Total a pagar</span>
                <span className="text-xl font-bold text-blue-600">{calculateTotalPrice()}</span>
              </div>
            </div>
@@ -150,7 +195,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({ rideDetails, searchDat
                 />
               ) : (
                 <span className="text-gray-600 font-medium text-sm">
-                  {rideDetails.driverName.split(' ').map((n: string) => n[0]).join('')}
+                  {getInitials(rideDetails.driverName)}
                 </span>
               )}
             </div>

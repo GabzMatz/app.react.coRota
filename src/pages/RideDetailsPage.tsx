@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, MapPin, Star, Users} from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
+import { getInitials } from '../utils/avatar';
 
 interface RideDetails {
   id?: number | string;
@@ -20,6 +21,14 @@ interface RideDetails {
   driverPhoto?: string;
   maxPassengers: number;
   availableSeats: number;
+  reservedSeats?: number;
+  pickupMode?: 'meeting_point' | 'street_by_street';
+  meetingPoint?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode?: string;
+  } | null;
 }
 
 interface RideDetailsPageProps {
@@ -27,9 +36,18 @@ interface RideDetailsPageProps {
   onTabChange?: (tab: string) => void;
   onBack?: () => void;
   onPageChange?: (page: string) => void;
+  showContinueButton?: boolean;
+  activeTab?: 'search' | 'routes';
 }
 
-export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, onTabChange, onBack, onPageChange }) => {
+export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({
+  rideDetails,
+  onTabChange,
+  onBack,
+  onPageChange,
+  showContinueButton = true,
+  activeTab = 'search'
+}) => {
   const driverPhoneDigits = rideDetails.driverPhone?.replace(/\D/g, '');
 
   const handleTabChange = (tab: string) => {
@@ -119,6 +137,20 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
 
          <div className="border-t border-gray-200 my-4"></div>
 
+        <div className="mb-4 rounded-lg border border-gray-200 p-3">
+          <span className="text-sm font-medium text-gray-800 block mb-1">Embarque</span>
+          {rideDetails.pickupMode === 'street_by_street' ? (
+            <span className="text-sm text-gray-600">Motorista passa nas ruas dos passageiros.</span>
+          ) : (
+            <span className="text-sm text-gray-600">
+              Ponto de encontro: {rideDetails.meetingPoint
+                ? `${rideDetails.meetingPoint.street}, ${rideDetails.meetingPoint.city} - ${rideDetails.meetingPoint.state}`
+                : 'a combinar no chat com o motorista.'}
+            </span>
+          )}
+        </div>
+
+         {/* Informações do Motorista */}
          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
            <div className="flex items-center">
              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden mr-4">
@@ -130,7 +162,7 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
                  />
                ) : (
                  <span className="text-gray-600 font-medium text-lg">
-                   {rideDetails.driverName.split(' ').map(n => n[0]).join('')}
+                   {getInitials(rideDetails.driverName)}
                  </span>
                )}
              </div>
@@ -167,16 +199,24 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({ rideDetails, o
            <span>{rideDetails.availableSeats} passageiros no máximo</span>
          </div>
 
-        <button 
-          onClick={handleContinue}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          Continuar
-        </button>
+        {typeof rideDetails.reservedSeats === 'number' && rideDetails.reservedSeats > 0 && (
+          <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-3 text-blue-800 text-sm">
+            Assentos reservados por voce: <strong>{rideDetails.reservedSeats}</strong>
+          </div>
+        )}
+
+        {showContinueButton && (
+          <button 
+            onClick={handleContinue}
+            className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Continuar
+          </button>
+        )}
       </div>
 
       <BottomNav 
-        activeTab="search"
+        activeTab={activeTab}
         onTabChange={handleTabChange}
       />
     </div>
