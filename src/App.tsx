@@ -6,6 +6,7 @@ import { SearchResultsPage } from './pages/SearchResultsPage';
 import { RideDetailsPage } from './pages/RideDetailsPage';
 import { DriverRideDetailsPage } from './pages/DriverRideDetailsPage';
 import type { DriverPassengerInfo } from './pages/DriverRideDetailsPage';
+import { PickupPlanningPage } from './pages/PickupPlanningPage';
 import { BookingPage } from './pages/BookingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreatePage } from './pages/CreatePage';
@@ -28,6 +29,9 @@ import { computeEndTimeFromLeaflet } from './utils/time';
 import { useToast } from './contexts/ToastContext';
 import type { BookedRide } from './types';
 import { RideStatus } from './types';
+import { MessagesInboxPage } from './pages/MessagesInboxPage';
+import { MessagesChatPage } from './pages/MessagesChatPage';
+import { NewMessagePage } from './pages/NewMessagePage';
 
 const PLAIN_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -84,24 +88,36 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('search');
   const [createStep, setCreateStep] = useState<'departure' | 'destination' | 'route' | 'date' | 'time' | 'passengers' | 'price'>('departure');
   const [selectedRide, setSelectedRide] = useState(null);
-  const [searchData, setSearchData] = useState<{ departure: string; passengers: number } | null>(null);
+  const [searchData, setSearchData] = useState<{ departure: string; passengers: number | null; date: string | null } | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [bookedRides, setBookedRides] = useState<BookedRide[]>([]);
   const [loadingRideHistory, setLoadingRideHistory] = useState(false);
   const [completedRides, setCompletedRides] = useState<BookedRide[]>([]);
   const [loadingCompletedRides, setLoadingCompletedRides] = useState(false);
-  const [routesView, setRoutesView] = useState<'list' | 'driver-details'>('list');
+  const [routesView, setRoutesView] = useState<'list' | 'driver-details' | 'passenger-details' | 'pickup-planning'>('list');
   const [selectedDriverRide, setSelectedDriverRide] = useState<BookedRide | null>(null);
+  const [selectedPassengerRide, setSelectedPassengerRide] = useState<BookedRide | null>(null);
   const [driverPassengers, setDriverPassengers] = useState<DriverPassengerInfo[]>([]);
   const [loadingDriverPassengers, setLoadingDriverPassengers] = useState(false);
-  const [createDate, setCreateDate] = useState<string | null>(null);
-  const [createTime, setCreateTime] = useState<string | null>(null);
+  const [pickupPlanningRideId, setPickupPlanningRideId] = useState<string | null>(null);
+  // Create flow selections
+  const [createDate, setCreateDate] = useState<string | null>(null); // YYYY-MM-DD
+  const [createTime, setCreateTime] = useState<string | null>(null); // HH:mm
   const [createSeats, setCreateSeats] = useState<number | null>(null);
+  const [maxCreateSeats, setMaxCreateSeats] = useState<number>(4);
   const [editingRideId, setEditingRideId] = useState<string | null>(null);
   const [editInitialDeparture, setEditInitialDeparture] = useState<string>('');
   const [editInitialDestination, setEditInitialDestination] = useState<string>('');
-    const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
-    const [editPassengerIds, setEditPassengerIds] = useState<string[]>([]);
+  const [editInitialPrice, setEditInitialPrice] = useState<number | null>(null);
+  const [editPassengerIds, setEditPassengerIds] = useState<string[]>([]);
+  const [messagesView, setMessagesView] = useState<'inbox' | 'chat' | 'new'>('inbox');
+  const [messagesChat, setMessagesChat] = useState<{
+    conversationId: string;
+    title: string;
+    participantId: string;
+  } | null>(null);
+  const [messagesInboxKey, setMessagesInboxKey] = useState(0);
+  // price is passed directly to handler; no need to store separately
 
   const resetCreateFlow = useCallback(() => {
     setCreateStep('departure');
@@ -132,6 +148,9 @@ function AppContent() {
     setCompletedRides([]);
     setLoadingRideHistory(false);
     setLoadingCompletedRides(false);
+    setMessagesView('inbox');
+    setMessagesChat(null);
+    setMessagesInboxKey((k) => k + 1);
     setIsAuthenticated(false);
     if (message) {
       showError(message);
@@ -140,15 +159,33 @@ function AppContent() {
 
   const handleTabChange = (tab: string) => {
     if (tab === 'messages') {
+      setActiveTab('messages');
+      setMessagesView('inbox');
+      setMessagesChat(null);
+      setMessagesInboxKey((k) => k + 1);
+      return;
+    }
+
+    if (tab === 'create') {
+      void (async () => {
+        try {
+          const seatLimit = await loadDriverSeatLimit();
+          setMaxCreateSeats(seatLimit);
+          resetCreateFlow();
+          setCurrentPage('create');
+          setActiveTab('create');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Nao foi possivel validar o veiculo do motorista.';
+          showError(message);
+          setActiveTab('profile');
+        }
+      })();
       return;
     }
 
     setActiveTab(tab);
     if (tab === 'search') {
       setCurrentPage('search');
-    } else if (tab === 'create') {
-      resetCreateFlow();
-      setCurrentPage('create');
     }
   };
 
@@ -195,10 +232,13 @@ function AppContent() {
     }
   };
 
-  const handleConfirmBooking = (rideDetails: any, searchData: { departure: string; passengers: number }) => {
+  const handleConfirmBooking = (rideDetails: any, searchData: { departure: string; passengers: number | null; date: string | null }) => {
     const newBooking: BookedRide = {
       id: Date.now().toString(),
-      rideDetails,
+      rideDetails: {
+        ...rideDetails,
+        reservedSeats: searchData.passengers ?? 1
+      },
       searchData,
       bookingDate: new Date().toISOString(),
       status: 'confirmed'
@@ -219,6 +259,20 @@ function AppContent() {
     return me.id;
   }, []);
 
+  const loadDriverSeatLimit = useCallback(async (): Promise<number> => {
+    const userId = await getDriverId();
+    const user = await userService.getUserById(userId);
+    const carSeats = Number(user.carSeats ?? 0);
+    const hasCarConfigured = Boolean(user.carInfo?.trim()) && carSeats >= 2;
+
+    if (!hasCarConfigured) {
+      throw new Error('Cadastre um veiculo no perfil com quantidade de lugares para criar corridas.');
+    }
+
+    return carSeats;
+  }, [getDriverId]);
+
+  // Função auxiliar para fazer reverse geocoding usando Photon
   const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     try {
       const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
@@ -293,6 +347,9 @@ function AppContent() {
 
       const transformedRidesPromises = history.map(async (item: any) => {
         const ride = item.ride;
+        const reservedSeatsByUser = Array.isArray(ride.passengerIds)
+          ? ride.passengerIds.filter((id: string) => id === userId).length
+          : 0;
         
         const departureTime = ride.startTime || ride.time || '--:--';
         const arrivalTime = ride.endTime || '--:--';
@@ -332,18 +389,22 @@ function AppContent() {
             price: formatPrice(ride.pricePerPassenger),
             driverName,
             driverPhone: driverData?.phone,
-            driverPhoto: null,
+            driverPhoto: driverData?.photo || null,
             driverRating: '4.5',
             departureLocation: 'Origem',
             departureAddress,
             arrivalLocation: 'Destino',
             arrivalAddress,
             maxPassengers: ride.allSeats,
-            availableSeats: ride.availableSeats
+            availableSeats: ride.availableSeats,
+            reservedSeats: item.role === 'passenger' ? reservedSeatsByUser : undefined,
+            pickupMode: ride.pickupMode || 'meeting_point',
+            meetingPoint: ride.meetingPoint || null
           },
           searchData: {
             departure: 'Origem',
-            passengers: ride.allSeats - ride.availableSeats
+            passengers: ride.allSeats - ride.availableSeats,
+            date: null
           },
           bookingDate: formatDateDisplay(parseDateInput(item.createdAt)),
           status: item.status || 'pending',
@@ -384,12 +445,16 @@ function AppContent() {
     }
   };
 
-  const handleViewDriverRideDetails = async (ride: BookedRide) => {
+  const handleViewRideDetails = async (ride: BookedRide) => {
     if (ride.role !== 'driver') {
+      setSelectedPassengerRide(ride);
+      setSelectedDriverRide(null);
+      setRoutesView('passenger-details');
       return;
     }
 
     setSelectedDriverRide(ride);
+    setSelectedPassengerRide(null);
     setRoutesView('driver-details');
     setLoadingDriverPassengers(true);
 
@@ -397,12 +462,18 @@ function AppContent() {
       const rideId = ride.rideDetails?.id || ride.id;
       const rideData = await rideService.getRideById(rideId);
       const passengerIds: string[] = Array.isArray(rideData?.passengerIds) ? rideData.passengerIds : [];
+      const passengerPickups = Array.isArray(rideData?.passengerPickups) ? rideData.passengerPickups : [];
+      const pickupAddressByUserId = new Map<string, string>(
+        passengerPickups.map((pickup: { userId: string; address: string }) => [pickup.userId, pickup.address || ''])
+      );
 
       setSelectedDriverRide(prev => prev ? {
         ...prev,
         rideDetails: {
           ...prev.rideDetails,
-          passengerIds
+          passengerIds,
+          pickupMode: rideData?.pickupMode || prev.rideDetails?.pickupMode || 'meeting_point',
+          meetingPoint: rideData?.meetingPoint || prev.rideDetails?.meetingPoint || null
         }
       } : prev);
 
@@ -414,12 +485,16 @@ function AppContent() {
       const passengerPromises = passengerIds.map(async (passengerId) => {
         try {
           const passengerData = await userService.getUserById(passengerId);
+          const passengerRaw = passengerData as unknown as Record<string, unknown>;
+          const photoCandidate = passengerRaw.photo;
+          const photoUrl = typeof photoCandidate === 'string' && photoCandidate.length > 0 ? photoCandidate : null;
           const fullName = `${passengerData.firstName || ''} ${passengerData.lastName || ''}`.trim() || 'Passageiro sem nome';
           return {
             id: passengerData.id,
             fullName,
             phone: passengerData.phone,
-            addressId: passengerData.addressId
+            pickupAddress: pickupAddressByUserId.get(passengerData.id) || '',
+            photoUrl
           } as DriverPassengerInfo;
         } catch (error) {
           console.error(`Erro ao buscar passageiro ${passengerId}:`, error);
@@ -435,6 +510,7 @@ function AppContent() {
       showError(message);
       setRoutesView('list');
       setSelectedDriverRide(null);
+      setSelectedPassengerRide(null);
       setDriverPassengers([]);
     } finally {
       setLoadingDriverPassengers(false);
@@ -444,7 +520,14 @@ function AppContent() {
   const handleCloseDriverRideDetails = () => {
     setRoutesView('list');
     setSelectedDriverRide(null);
+    setSelectedPassengerRide(null);
     setDriverPassengers([]);
+    setPickupPlanningRideId(null);
+  };
+
+  const handleOpenPickupPlanner = (rideId: string) => {
+    setPickupPlanningRideId(rideId);
+    setRoutesView('pickup-planning');
   };
 
   useEffect(() => {
@@ -454,8 +537,10 @@ function AppContent() {
       setLoadingRideHistory(false);
       setRoutesView('list');
       setSelectedDriverRide(null);
+      setSelectedPassengerRide(null);
       setDriverPassengers([]);
       setLoadingDriverPassengers(false);
+      setPickupPlanningRideId(null);
     }
   }, [activeTab, fetchRideHistory]);
 
@@ -537,18 +622,21 @@ function AppContent() {
                 price: `R$ ${ride.pricePerPassenger.toFixed(2).replace('.', ',')}`,
                 driverName,
                 driverPhone: driverData?.phone,
-                driverPhoto: null,
+                driverPhoto: driverData?.photo || null,
                 driverRating: '4.5',
                 departureLocation: 'Origem',
                 departureAddress,
                 arrivalLocation: 'Destino',
                 arrivalAddress,
                 maxPassengers: ride.allSeats,
-                availableSeats: ride.availableSeats
+                availableSeats: ride.availableSeats,
+                pickupMode: ride.pickupMode || 'meeting_point',
+                meetingPoint: ride.meetingPoint || null
               },
               searchData: {
                 departure: departureAddress,
-                passengers: ride.allSeats - ride.availableSeats
+                passengers: ride.allSeats - ride.availableSeats,
+                date: null
               },
               bookingDate: formatDate(parseDateInput(item.createdAt)),
               status: item.status || 'pending',
@@ -614,9 +702,13 @@ function AppContent() {
         address: destinationAddress
       }));
 
+      // Preencher estados do fluxo de criação
+      const seatLimit = await loadDriverSeatLimit();
+      setMaxCreateSeats(seatLimit);
       setCreateDate(formattedDate);
       setCreateTime(rideData.startTime || rideData.time || '');
-      setCreateSeats(rideData.allSeats || rideData.availableSeats || 1);
+      const preselectedSeats = rideData.allSeats || rideData.availableSeats || 1;
+      setCreateSeats(Math.min(preselectedSeats, seatLimit));
       setEditInitialDeparture(departureAddress);
       setEditInitialDestination(destinationAddress);
       setEditInitialPrice(rideData.pricePerPassenger || null);
@@ -641,6 +733,9 @@ function AppContent() {
       }
       if (!createDate || !createTime || !createSeats) {
         throw new Error('Data, horário ou lugares não definidos.');
+      }
+      if (createSeats > maxCreateSeats) {
+        throw new Error(`Seu veículo permite no máximo ${maxCreateSeats} assentos disponíveis.`);
       }
 
       const departure = JSON.parse(departureRaw);
@@ -741,7 +836,7 @@ function AppContent() {
       ) : (
         <>
           {activeTab === 'search' && currentPage === 'search' && <SearchPage onTabChange={handleTabChange} onPageChange={handlePageChange} completedRides={completedRides} isLoadingRecentRides={loadingCompletedRides} />}
-          {activeTab === 'search' && currentPage === 'search-destination' && <SearchDestinationPage onTabChange={handleTabChange} onBack={() => setCurrentPage('search')} onContinue={(rides) => { const departure = localStorage.getItem('searchDeparture'); const passengers = localStorage.getItem('searchPassengers'); setSearchData({ departure: departure || '', passengers: parseInt(passengers || '1') }); setSearchResults(rides); setCurrentPage('search-results'); }} searchData={searchData || undefined} />}
+          {activeTab === 'search' && currentPage === 'search-destination' && <SearchDestinationPage onTabChange={handleTabChange} onBack={() => setCurrentPage('search')} onContinue={(rides) => { const departure = localStorage.getItem('searchDeparture'); const passengers = localStorage.getItem('searchPassengers'); const date = localStorage.getItem('searchDate'); setSearchData({ departure: departure || '', passengers: passengers ? parseInt(passengers, 10) : null, date: date || null }); setSearchResults(rides); setCurrentPage('search-results'); }} searchData={searchData || undefined} />}
           {activeTab === 'search' && currentPage === 'search-results' && <SearchResultsPage rides={searchResults} onTabChange={handleTabChange} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'ride-details' && selectedRide && <RideDetailsPage rideDetails={selectedRide} onTabChange={handleTabChange} onBack={handleBack} onPageChange={handlePageChange} />}
           {activeTab === 'search' && currentPage === 'booking' && selectedRide && <BookingPage rideDetails={selectedRide} searchData={searchData || undefined} onTabChange={handleTabChange} onBack={handleBack} onConfirmBooking={handleConfirmBooking} />}
@@ -750,8 +845,8 @@ function AppContent() {
           {activeTab === 'create' && createStep === 'route' && <RouteSelectedPage onTabChange={handleTabChange} onBack={handleCreateBack} onNavigateToDateSelection={() => setCreateStep('date')} />}
           {activeTab === 'create' && createStep === 'date' && <DateSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onDateSelected={(d) => { const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); setCreateDate(`${yyyy}-${mm}-${dd}`); setCreateStep('time'); }} initialDate={createDate || undefined} isEditing={Boolean(editingRideId)} />}
           {activeTab === 'create' && createStep === 'time' && <TimeSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onTimeSelected={(t) => { setCreateTime(t); setCreateStep('passengers'); }} initialTime={createTime || undefined} />}
-          {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} initialCount={createSeats || undefined} />}
-          {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={(price) => { handleCreateRide(price); }} initialPrice={editInitialPrice || undefined} />}
+          {activeTab === 'create' && createStep === 'passengers' && <PassengerSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPassengerSelected={(count) => { setCreateSeats(count); setCreateStep('price'); }} initialCount={createSeats || undefined} maxCount={maxCreateSeats} />}
+          {activeTab === 'create' && createStep === 'price' && <PriceSelectionPage onTabChange={handleTabChange} onBack={handleCreateBack} onPriceSelected={handleCreateRide} initialPrice={editInitialPrice || undefined} />}
           {activeTab === 'routes' && routesView === 'list' && (
             <RidesList
               onTabChange={handleTabChange}
@@ -759,7 +854,16 @@ function AppContent() {
               onCancelBooking={handleCancelBooking}
               onEditRide={handleEditRide}
               isLoading={loadingRideHistory}
-              onViewRideDetails={handleViewDriverRideDetails}
+              onViewRideDetails={handleViewRideDetails}
+            />
+          )}
+          {activeTab === 'routes' && routesView === 'passenger-details' && selectedPassengerRide && (
+            <RideDetailsPage
+              rideDetails={selectedPassengerRide.rideDetails}
+              onTabChange={handleTabChange}
+              onBack={handleCloseDriverRideDetails}
+              showContinueButton={false}
+              activeTab="routes"
             />
           )}
           {activeTab === 'routes' && routesView === 'driver-details' && selectedDriverRide && (
@@ -769,9 +873,60 @@ function AppContent() {
               isLoadingPassengers={loadingDriverPassengers}
               onBack={handleCloseDriverRideDetails}
               onTabChange={handleTabChange}
+              onOpenPickupPlanner={handleOpenPickupPlanner}
+            />
+          )}
+          {activeTab === 'routes' && routesView === 'pickup-planning' && pickupPlanningRideId && (
+            <PickupPlanningPage
+              rideId={pickupPlanningRideId}
+              onBack={() => setRoutesView('driver-details')}
+              onSaved={(data) => {
+                setSelectedDriverRide((prev) => prev ? {
+                  ...prev,
+                  rideDetails: {
+                    ...prev.rideDetails,
+                    pickupMode: data.pickupMode,
+                    meetingPoint: data.meetingPoint
+                  }
+                } : prev);
+              }}
             />
           )}
           {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
+          {activeTab === 'messages' && messagesView === 'inbox' && (
+            <MessagesInboxPage
+              key={messagesInboxKey}
+              onTabChange={handleTabChange}
+              onOpenChat={(conversationId, title, participantId) => {
+                setMessagesChat({ conversationId, title, participantId });
+                setMessagesView('chat');
+              }}
+              onNewMessage={() => setMessagesView('new')}
+            />
+          )}
+          {activeTab === 'messages' && messagesView === 'chat' && messagesChat && (
+            <MessagesChatPage
+              conversationId={messagesChat.conversationId}
+              title={messagesChat.title}
+              participantId={messagesChat.participantId}
+              onTabChange={handleTabChange}
+              onBack={() => {
+                setMessagesView('inbox');
+                setMessagesChat(null);
+                setMessagesInboxKey((k) => k + 1);
+              }}
+            />
+          )}
+          {activeTab === 'messages' && messagesView === 'new' && (
+            <NewMessagePage
+              onTabChange={handleTabChange}
+              onBack={() => setMessagesView('inbox')}
+              onConversationReady={(conversationId, title, participantId) => {
+                setMessagesChat({ conversationId, title, participantId });
+                setMessagesView('chat');
+              }}
+            />
+          )}
         </>
         )}
       </RegisterProvider>
