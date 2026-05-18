@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Search, Plus, MessageCircle, User } from 'lucide-react';
+import { Search, Plus, MessageCircle, User, Bell } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { messageService, type ConversationDto } from '../services/messageService';
+import { notificationService } from '../services/notificationService';
 import { countUnreadMessages } from '../utils/messageUnread';
+import { showDeviceNotification } from '../utils/pushNotifications';
 
 interface BottomNavProps {
   activeTab?: string;
@@ -24,6 +26,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onTabChange,
 }) => {
   const [unreadConversationsCount, setUnreadConversationsCount] = useState(0);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const lastNotificationIdsRef = React.useRef<Set<string>>(new Set());
 
   const loadUnreadConversations = useCallback(async () => {
     const token = localStorage.getItem('authToken');
@@ -84,19 +88,46 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     }
   }, []);
 
+  const loadUnreadNotifications = useCallback(async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setUnreadNotificationsCount(0);
+      return;
+    }
+
+    try {
+      const list = await notificationService.listNotifications();
+      const unread = list.filter((item) => !item.read);
+      setUnreadNotificationsCount(unread.length);
+
+      const knownIds = lastNotificationIdsRef.current;
+      unread.forEach((notification) => {
+        if (!knownIds.has(notification.id)) {
+          showDeviceNotification(notification.title, { body: notification.body });
+        }
+      });
+      lastNotificationIdsRef.current = new Set(list.map((item) => item.id));
+    } catch {
+      setUnreadNotificationsCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     void loadUnreadConversations();
+    void loadUnreadNotifications();
     const intervalId = window.setInterval(() => {
       void loadUnreadConversations();
+      void loadUnreadNotifications();
     }, 7000);
     return () => window.clearInterval(intervalId);
-  }, [loadUnreadConversations]);
+  }, [loadUnreadConversations, loadUnreadNotifications]);
 
   const tabs = [
     { id: 'search', icon: Search, label: 'Pesquisa' },
     { id: 'create', icon: Plus, label: 'Criar' },
     { id: 'routes', icon: LogoIcon, label: 'Rotas' },
     { id: 'messages', icon: MessageCircle, label: 'Mensagens' },
+    { id: 'notifications', icon: Bell, label: 'Alertas' },
     { id: 'profile', icon: User, label: 'Perfil' }
   ];
 
@@ -121,6 +152,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   {id === 'messages' && unreadConversationsCount > 0 && (
                     <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
                       {unreadConversationsCount > 99 ? '99+' : unreadConversationsCount}
+                    </span>
+                  )}
+                  {id === 'notifications' && unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                      {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
                     </span>
                   )}
                 </div>
