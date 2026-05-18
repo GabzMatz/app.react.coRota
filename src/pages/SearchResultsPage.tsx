@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { BottomNav } from '../components/BottomNav';
 import { userService } from '../services/userService';
+import { buildPassengerRideExtras } from '../utils/rideDetailsEnrichment';
+import { parseVehicleTypeFromCarInfo } from '../utils/vehicleType';
 
 interface SearchResultsPageProps {
   rides?: any[];
@@ -91,6 +93,16 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       }
     }
 
+    const authUserRaw = localStorage.getItem('authUser');
+    let passengerUserId: string | null = null;
+    if (authUserRaw) {
+      try {
+        passengerUserId = JSON.parse(authUserRaw).id as string;
+      } catch {
+        passengerUserId = null;
+      }
+    }
+
     return {
       id: ride.id || ride._id || 0,
       date: formatDate(ride.date),
@@ -107,8 +119,14 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
       driverPhoto: ride.driverPhoto,
       maxPassengers: ride.allSeats || ride.availableSeats || 4,
       availableSeats: ride.availableSeats ?? ride.allSeats ?? 1,
-      pickupMode: ride.pickupMode || 'meeting_point',
-      meetingPoint: ride.meetingPoint || null
+      ...buildPassengerRideExtras(
+        ride,
+        {
+          vehicleType: ride.driverVehicleType || parseVehicleTypeFromCarInfo(ride.driverCarInfo),
+          carInfo: ride.driverCarInfo,
+        },
+        passengerUserId
+      ),
     };
   };
 
@@ -180,7 +198,9 @@ export const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ rides = []
               ...ride,
               driverName: `${driverData.firstName} ${driverData.lastName}`.trim(),
               driverPhoto: ride.driverPhoto || undefined,
-              driverPhone: driverData.phone
+              driverPhone: driverData.phone,
+              driverVehicleType: driverData.vehicleType || parseVehicleTypeFromCarInfo(driverData.carInfo),
+              driverCarInfo: driverData.carInfo,
             };
           }
           

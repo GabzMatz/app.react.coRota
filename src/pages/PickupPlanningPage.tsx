@@ -72,7 +72,14 @@ export const PickupPlanningPage: React.FC<PickupPlanningPageProps> = ({ rideId, 
           lat: Number(ride.destinationLatLng[0]),
           long: Number(ride.destinationLatLng[1]),
         });
-        setPassengerPoints((context.passengerPickups || []).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.long)));
+        setPassengerPoints(
+          (context.passengerPickups || []).filter(
+            (point) =>
+              Number.isFinite(point.lat) &&
+              Number.isFinite(point.long) &&
+              !(point.lat === 0 && point.long === 0)
+          )
+        );
 
         const suggested = await rideService.suggestMeetingPoints(rideId);
         setSuggestions(suggested);

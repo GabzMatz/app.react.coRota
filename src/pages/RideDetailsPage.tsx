@@ -2,6 +2,8 @@ import React from 'react';
 import { ArrowLeft, MapPin, Star, Users} from 'lucide-react';
 import { BottomNav } from '../components/BottomNav';
 import { getInitials } from '../utils/avatar';
+import { getPassengerEmbarkMessage } from '../utils/pickupEmbark';
+import { vehicleTypeLabel } from '../utils/vehicleType';
 
 interface RideDetails {
   id?: number | string;
@@ -23,12 +25,15 @@ interface RideDetails {
   availableSeats: number;
   reservedSeats?: number;
   pickupMode?: 'meeting_point' | 'street_by_street';
+  pickupPlanConfigured?: boolean;
+  passengerStreetAddress?: string;
   meetingPoint?: {
     street: string;
     city: string;
     state: string;
     zipCode?: string;
   } | null;
+  driverVehicleType?: 'car' | 'motorcycle';
 }
 
 interface RideDetailsPageProps {
@@ -139,15 +144,14 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({
 
         <div className="mb-4 rounded-lg border border-gray-200 p-3">
           <span className="text-sm font-medium text-gray-800 block mb-1">Embarque</span>
-          {rideDetails.pickupMode === 'street_by_street' ? (
-            <span className="text-sm text-gray-600">Motorista passa nas ruas dos passageiros.</span>
-          ) : (
-            <span className="text-sm text-gray-600">
-              Ponto de encontro: {rideDetails.meetingPoint
-                ? `${rideDetails.meetingPoint.street}, ${rideDetails.meetingPoint.city} - ${rideDetails.meetingPoint.state}`
-                : 'a combinar no chat com o motorista.'}
-            </span>
-          )}
+          <span className="text-sm text-gray-600">
+            {getPassengerEmbarkMessage({
+              pickupPlanConfigured: rideDetails.pickupPlanConfigured,
+              pickupMode: rideDetails.pickupMode,
+              meetingPoint: rideDetails.meetingPoint,
+              passengerStreetAddress: rideDetails.passengerStreetAddress,
+            })}
+          </span>
         </div>
 
          {/* Informações do Motorista */}
@@ -194,10 +198,17 @@ export const RideDetailsPage: React.FC<RideDetailsPageProps> = ({
           </div>
         )}
 
-         <div className="flex items-center text-gray-600 mb-4">
+         <div className="flex items-center text-gray-600 mb-2">
            <Users className="w-5 h-5 mr-2" />
            <span>{rideDetails.availableSeats} passageiros no máximo</span>
          </div>
+
+        {rideDetails.driverVehicleType && (
+          <div className="flex items-center text-gray-600 mb-4 text-sm">
+            <span className="font-medium text-gray-800 mr-1">Veículo:</span>
+            <span>{vehicleTypeLabel(rideDetails.driverVehicleType)}</span>
+          </div>
+        )}
 
         {typeof rideDetails.reservedSeats === 'number' && rideDetails.reservedSeats > 0 && (
           <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-3 text-blue-800 text-sm">

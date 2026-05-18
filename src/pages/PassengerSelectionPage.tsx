@@ -97,7 +97,9 @@ export const PassengerSelectionPage: React.FC<PassengerSelectionPageProps> = ({
       
       <div className="px-6">
         <div className="border-t border-gray-200"></div>
-        <p className="text-sm text-gray-500 mt-3">Maximo permitido para sua vaga: {maxCount} passageiro(s)</p>
+        <p className="text-sm text-gray-500 mt-3">
+          Máximo de {maxCount} passageiro(s) — lugares no carro além do motorista.
+        </p>
       </div>
 
 

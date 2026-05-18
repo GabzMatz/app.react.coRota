@@ -32,6 +32,9 @@ import { RideStatus } from './types';
 import { MessagesInboxPage } from './pages/MessagesInboxPage';
 import { MessagesChatPage } from './pages/MessagesChatPage';
 import { NewMessagePage } from './pages/NewMessagePage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { buildPassengerRideExtras } from './utils/rideDetailsEnrichment';
+import { buildRideDetailsFromApi } from './utils/rideToDetails';
 
 const PLAIN_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -269,8 +272,44 @@ function AppContent() {
       throw new Error('Cadastre um veiculo no perfil com quantidade de lugares para criar corridas.');
     }
 
-    return carSeats;
+    return Math.max(1, carSeats - 1);
   }, [getDriverId]);
+
+  const handleOpenRideFromNotification = useCallback(
+    async (rideId: string) => {
+      try {
+        const ride = await rideService.getRideById(rideId);
+        let driverData: Awaited<ReturnType<typeof userService.getUserById>> | null = null;
+        if (ride.driverId) {
+          try {
+            driverData = await userService.getUserById(ride.driverId);
+          } catch {
+            driverData = null;
+          }
+        }
+
+        const details = await buildRideDetailsFromApi({
+          ...ride,
+          driverName: driverData
+            ? `${driverData.firstName || ''} ${driverData.lastName || ''}`.trim()
+            : undefined,
+          driverPhone: driverData?.phone,
+          driverPhoto: driverData?.photo,
+          driverCarInfo: driverData?.carInfo,
+          driverVehicleType: driverData?.vehicleType,
+        });
+
+        setSelectedRide(details as never);
+        setActiveTab('search');
+        setCurrentPage('ride-details');
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Não foi possível abrir os detalhes da corrida.';
+        showError(message);
+      }
+    },
+    [showError]
+  );
 
   // Função auxiliar para fazer reverse geocoding usando Photon
   const reverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
@@ -398,8 +437,7 @@ function AppContent() {
             maxPassengers: ride.allSeats,
             availableSeats: ride.availableSeats,
             reservedSeats: item.role === 'passenger' ? reservedSeatsByUser : undefined,
-            pickupMode: ride.pickupMode || 'meeting_point',
-            meetingPoint: ride.meetingPoint || null
+            ...buildPassengerRideExtras(ride, driverData, userId),
           },
           searchData: {
             departure: 'Origem',
@@ -735,7 +773,9 @@ function AppContent() {
         throw new Error('Data, horário ou lugares não definidos.');
       }
       if (createSeats > maxCreateSeats) {
-        throw new Error(`Seu veículo permite no máximo ${maxCreateSeats} assentos disponíveis.`);
+        throw new Error(
+          `Seu veículo permite no máximo ${maxCreateSeats} vaga(s) para passageiros (contando apenas os lugares além do motorista).`
+        );
       }
 
       const departure = JSON.parse(departureRaw);
@@ -890,6 +930,12 @@ function AppContent() {
                   }
                 } : prev);
               }}
+            />
+          )}
+          {activeTab === 'notifications' && (
+            <NotificationsPage
+              onTabChange={handleTabChange}
+              onOpenRideDetails={handleOpenRideFromNotification}
             />
           )}
           {activeTab === 'profile' && <ProfilePage onTabChange={handleTabChange} onLogout={() => setIsAuthenticated(false)} />}
