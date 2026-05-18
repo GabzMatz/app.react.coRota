@@ -14,6 +14,7 @@ export interface UserRegisterRequest {
   isActive: boolean;
   carInfo?: string;
   carSeats?: number;
+  vehicleType?: 'car' | 'motorcycle';
   photo?: string;
 }
 
@@ -57,6 +58,7 @@ export interface UserResponse {
   isActive: boolean;
   carInfo?: string;
   carSeats?: number;
+  vehicleType?: 'car' | 'motorcycle';
   photo?: string;
   id: string;
   createdAt: {
@@ -162,14 +164,21 @@ class UserService {
     return data;
   }
 
-  async updateProfile(userId: string, payload: Partial<Pick<UserResponse, 'phone' | 'photo' | 'carInfo' | 'carSeats'>>): Promise<{ message: string; photoSkipped?: boolean }> {
+  async updateProfile(
+    userId: string,
+    payload: Partial<Pick<UserResponse, 'phone' | 'photo' | 'carInfo' | 'carSeats' | 'vehicleType'>> & {
+      clearVehicle?: boolean;
+    }
+  ): Promise<{ message: string; photoSkipped?: boolean }> {
     const token = localStorage.getItem('authToken');
     let photoSkipped = false;
-    const normalizedPayload: Partial<Pick<UserResponse, 'phone' | 'photo' | 'carInfo' | 'carSeats'>> = {
+    const normalizedPayload: Record<string, unknown> = {
       ...(typeof payload.phone === 'string' ? { phone: payload.phone } : {}),
       ...(typeof payload.photo === 'string' ? { photo: payload.photo } : {}),
       ...(typeof payload.carInfo === 'string' ? { carInfo: payload.carInfo } : {}),
-      ...(typeof payload.carSeats === 'number' ? { carSeats: payload.carSeats } : {})
+      ...(typeof payload.carSeats === 'number' ? { carSeats: payload.carSeats } : {}),
+      ...(payload.vehicleType ? { vehicleType: payload.vehicleType } : {}),
+      ...(payload.clearVehicle === true ? { clearVehicle: true } : {}),
     };
 
     const sendUpdate = async (body: unknown) => {

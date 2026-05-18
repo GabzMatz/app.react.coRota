@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import AuthCard, { type AuthField } from '../components/AuthCard';
 import { useRegister } from '../contexts/RegisterContext';
+import {
+  formatLicensePlateInput,
+  isValidBrazilianLicensePlate,
+  licensePlateValidationMessage,
+} from '../utils/licensePlate';
 
 interface RegisterStep2PageProps {
   onNext: () => void;
@@ -13,6 +18,7 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     nomeCompleto: '',
     telefone: '',
     possuiCarro: '',
+    tipoVeiculo: 'car',
     marcaCarro: '',
     modeloCarro: '',
     placaCarro: '',
@@ -44,10 +50,22 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
       };
     }
 
+    if (data.possuiCarro === 'Sim' && data.placaCarro) {
+      const plateValid = isValidBrazilianLicensePlate(data.placaCarro);
+      newValidations.placaCarro = {
+        isValid: plateValid,
+        message: plateValid ? 'placa válida' : licensePlateValidationMessage,
+      };
+    }
+
     setFieldValidations(newValidations);
   };
 
   const handleInputChangeWithCarLogic = (data: Record<string, string>) => {
+    if (data.placaCarro) {
+      data.placaCarro = formatLicensePlateInput(data.placaCarro);
+    }
+
     if (data.possuiCarro === 'Não') {
       data.marcaCarro = '';
       data.modeloCarro = '';
@@ -60,24 +78,38 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
   };
 
   const handleSubmit = (data: Record<string, string>) => {
-    console.log('Dados do registro passo 2:', data);
+    const payload: Record<string, string> = { ...data, tipoVeiculo: vehicleType };
+
+    if (payload.possuiCarro === 'Sim') {
+      if (!isValidBrazilianLicensePlate(payload.placaCarro || '')) {
+        setFieldValidations((prev) => ({
+          ...prev,
+          placaCarro: { isValid: false, message: licensePlateValidationMessage },
+        }));
+        return;
+      }
+    }
+
+    console.log('Dados do registro passo 2:', payload);
     updateRegisterData('step2', {
-      nomeCompleto: data.nomeCompleto,
-      telefone: data.telefone,
-      possuiCarro: data.possuiCarro,
-      marcaCarro: data.marcaCarro,
-      modeloCarro: data.modeloCarro,
-      placaCarro: data.placaCarro,
-      corCarro: data.corCarro,
-      assentosCarro: data.assentosCarro,
-      nomeUsuario: data.nomeUsuario,
-      senha: data.senha,
-      confirmarSenha: data.confirmarSenha
+      nomeCompleto: payload.nomeCompleto,
+      telefone: payload.telefone,
+      possuiCarro: payload.possuiCarro,
+      tipoVeiculo: payload.tipoVeiculo || 'car',
+      marcaCarro: payload.marcaCarro,
+      modeloCarro: payload.modeloCarro,
+      placaCarro: payload.placaCarro,
+      corCarro: payload.corCarro,
+      assentosCarro: payload.assentosCarro,
+      nomeUsuario: payload.nomeUsuario,
+      senha: payload.senha,
+      confirmarSenha: payload.confirmarSenha
     });
     onNext();
   };
 
   const [isCarDataDisabled, setIsCarDataDisabled] = useState(false);
+  const [vehicleType, setVehicleType] = useState('car');
 
   const updateFieldsBasedOnCar = (data: Record<string, string>) => {
     const hasCar = data.possuiCarro === 'Sim';
@@ -150,7 +182,7 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
     },
     {
       name: 'assentosCarro',
-      label: 'Quantidade de assentos',
+      label: 'Quantidade total de lugares (inclui motorista)',
       type: 'number',
       placeholder: isCarDataDisabled ? 'Campo desabilitado' : 'Ex: 5',
       required: false,
@@ -180,6 +212,22 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
   ];
 
   return (
+    <>
+      {!isCarDataDisabled && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-5 pointer-events-none">
+          <div className="bg-white/95 rounded-xl p-3 shadow pointer-events-auto">
+            <label className="text-sm font-medium text-gray-700 block mb-1">Tipo de veículo</label>
+            <select
+              value={vehicleType}
+              onChange={(e) => setVehicleType(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="car">Carro</option>
+              <option value="motorcycle">Moto</option>
+            </select>
+          </div>
+        </div>
+      )}
     <AuthCard
       fields={registerFields}
       buttonText="Próximo"
@@ -193,6 +241,7 @@ const RegisterStep2Page: React.FC<RegisterStep2PageProps> = ({ onNext, onBack })
       onInputChange={updateFieldsBasedOnCar}
       showLogo={false}
     />
+    </>
   );
 };
 

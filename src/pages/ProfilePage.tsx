@@ -3,8 +3,16 @@ import { BottomNav } from '../components/BottomNav';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
-import { LogOut, Mail, Phone, CreditCard, Car, Pencil, Save, X } from 'lucide-react';
+import { addressService } from '../services/addressService';
+import { LogOut, Mail, Phone, CreditCard, Car, Pencil, Save, X, MapPin } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import {
+  formatLicensePlateInput,
+  isValidBrazilianLicensePlate,
+  licensePlateValidationMessage,
+} from '../utils/licensePlate';
+import { parseVehicleTypeFromCarInfo, vehicleTypeLabel, type VehicleType } from '../utils/vehicleType';
+import { PhotoCropModal } from '../components/PhotoCropModal';
 
 interface ProfilePageProps {
   onTabChange?: (tab: string) => void;
@@ -55,13 +63,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
     return parsed;
   };
 
-  const buildCarInfo = (carBrand: string, carModel: string, carPlate: string, carColor: string) => {
+  const buildCarInfo = (
+    vehicleType: VehicleType,
+    carBrand: string,
+    carModel: string,
+    carPlate: string,
+    carColor: string
+  ) => {
     const hasAnyValue = [carBrand, carModel, carPlate, carColor].some((value) => value.trim() !== '');
     if (!hasAnyValue) {
       return '';
     }
 
+    const typeLabel = vehicleType === 'motorcycle' ? 'Moto' : 'Carro';
     return [
+      `Tipo: ${typeLabel}`,
       `Marca: ${carBrand.trim()}`,
       `Modelo: ${carModel.trim()}`,
       `Placa: ${carPlate.trim()}`,
@@ -77,13 +93,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
   const [formData, setFormData] = useState({
     photo: '',
     phone: '',
+    vehicleType: 'car' as VehicleType,
     carBrand: '',
     carModel: '',
     carPlate: '',
     carColor: '',
-    carSeats: ''
+    carSeats: '',
+    cep: '',
+    rua: '',
+    numero: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    complemento: '',
   });
   const [selectedPhotoFileName, setSelectedPhotoFileName] = useState('');
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -103,15 +129,46 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
 
         const user = await userService.getUserById(userId);
         const parsedCarInfo = parseCarInfo(user.carInfo || '');
+        const vehicleType = user.vehicleType || parseVehicleTypeFromCarInfo(user.carInfo) || 'car';
+
+        let addressFields = {
+          cep: '',
+          rua: '',
+          numero: '',
+          bairro: '',
+          cidade: '',
+          estado: '',
+          complemento: '',
+        };
+
+        if (user.addressId) {
+          try {
+            const address = await addressService.getAddressById(user.addressId);
+            addressFields = {
+              cep: address.zipCode || '',
+              rua: address.street || '',
+              numero: address.number || '',
+              bairro: address.neighborhood || '',
+              cidade: address.city || '',
+              estado: address.state || '',
+              complemento: address.complement || '',
+            };
+          } catch {
+            // mantém endereço vazio se falhar o carregamento
+          }
+        }
+
         setUserData(user);
         setFormData({
           photo: user.photo || '',
           phone: user.phone || '',
+          vehicleType,
           carBrand: parsedCarInfo.carBrand,
           carModel: parsedCarInfo.carModel,
           carPlate: parsedCarInfo.carPlate,
           carColor: parsedCarInfo.carColor,
-          carSeats: user.carSeats ? String(user.carSeats) : ''
+          carSeats: user.carSeats ? String(user.carSeats) : '',
+          ...addressFields,
         });
       } catch (error) {
         console.error('Erro ao carregar dados do usuário:', error);
@@ -131,23 +188,47 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
   const handleEditToggle = () => {
     if (isEditing) {
       const parsedCarInfo = parseCarInfo(userData?.carInfo || '');
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         photo: userData?.photo || '',
         phone: userData?.phone || '',
+        vehicleType: userData?.vehicleType || parseVehicleTypeFromCarInfo(userData?.carInfo) || 'car',
         carBrand: parsedCarInfo.carBrand,
         carModel: parsedCarInfo.carModel,
         carPlate: parsedCarInfo.carPlate,
         carColor: parsedCarInfo.carColor,
-        carSeats: userData?.carSeats ? String(userData.carSeats) : ''
-      });
+        carSeats: userData?.carSeats ? String(userData.carSeats) : '',
+      }));
       setIsEditing(false);
       return;
     }
     setIsEditing(true);
   };
 
-  const handleInputChange = (field: 'photo' | 'phone' | 'carBrand' | 'carModel' | 'carPlate' | 'carColor' | 'carSeats', value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field:
+      | 'photo'
+      | 'phone'
+      | 'vehicleType'
+      | 'carBrand'
+      | 'carModel'
+      | 'carPlate'
+      | 'carColor'
+      | 'carSeats'
+      | 'cep'
+      | 'rua'
+      | 'numero'
+      | 'bairro'
+      | 'cidade'
+      | 'estado'
+      | 'complemento',
+    value: string
+  ) => {
+    if (field === 'carPlate') {
+      setFormData((prev) => ({ ...prev, carPlate: formatLicensePlateInput(value) }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const convertFileToBase64 = (file: File): Promise<string> => {
@@ -178,12 +259,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
 
     try {
       const base64 = await convertFileToBase64(file);
-      if (base64.length > MAX_PHOTO_DATA_URL_LENGTH) {
-        showError('Imagem muito grande para salvar no perfil. Escolha uma imagem menor.');
-        return;
-      }
-      setFormData(prev => ({ ...prev, photo: base64 }));
+      setCropImageSrc(base64);
       setSelectedPhotoFileName(file.name);
+      setCropModalOpen(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao processar imagem.';
       showError(message);
@@ -197,40 +275,91 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
       return;
     }
 
-    const generatedCarInfo = buildCarInfo(formData.carBrand, formData.carModel, formData.carPlate, formData.carColor);
+    const hasAnyCarField = [formData.carBrand, formData.carModel, formData.carPlate, formData.carColor, formData.carSeats]
+      .some((value) => value.trim() !== '');
 
-    if (generatedCarInfo && !formData.carSeats.trim()) {
-      showError('Informe a quantidade de lugares do veículo.');
-      return;
+    const generatedCarInfo = hasAnyCarField
+      ? buildCarInfo(
+          formData.vehicleType,
+          formData.carBrand,
+          formData.carModel,
+          formData.carPlate,
+          formData.carColor
+        )
+      : '';
+
+    if (generatedCarInfo) {
+      if (!isValidBrazilianLicensePlate(formData.carPlate)) {
+        showError(licensePlateValidationMessage);
+        return;
+      }
+      if (!formData.carSeats.trim()) {
+        showError('Informe a quantidade total de lugares do veículo (incluindo o motorista).');
+        return;
+      }
     }
 
     const parsedSeats = formData.carSeats.trim() ? Number(formData.carSeats) : undefined;
-    if (parsedSeats && (Number.isNaN(parsedSeats) || parsedSeats < 2 || parsedSeats > 8)) {
-      showError('A quantidade de lugares deve estar entre 2 e 8.');
-      return;
+    if (parsedSeats) {
+      const minSeats = formData.vehicleType === 'motorcycle' ? 1 : 2;
+      const maxSeats = formData.vehicleType === 'motorcycle' ? 2 : 8;
+      if (Number.isNaN(parsedSeats) || parsedSeats < minSeats || parsedSeats > maxSeats) {
+        showError(
+          formData.vehicleType === 'motorcycle'
+            ? 'Informe de 1 a 2 lugares no total (incluindo o motorista).'
+            : 'Informe de 2 a 8 lugares no total (incluindo o motorista).'
+        );
+        return;
+      }
     }
 
     try {
       setIsSaving(true);
-      const updateResult = await userService.updateProfile(userData.id, {
+
+      if (userData.addressId) {
+        await addressService.updateAddress(userData.addressId, {
+          street: formData.rua.trim(),
+          number: formData.numero.trim(),
+          neighborhood: formData.bairro.trim(),
+          city: formData.cidade.trim(),
+          state: formData.estado.trim(),
+          zipCode: formData.cep.trim(),
+          lat: '-23.518970',
+          long: '-47.458640',
+          complement: formData.complemento.trim(),
+          isActive: true,
+        });
+      }
+
+      const updatePayload: Parameters<typeof userService.updateProfile>[1] = {
         phone: formData.phone.trim(),
         photo: formData.photo.trim(),
-        carInfo: generatedCarInfo,
-        carSeats: parsedSeats
-      });
+      };
+
+      if (generatedCarInfo) {
+        updatePayload.carInfo = generatedCarInfo;
+        updatePayload.carSeats = parsedSeats;
+        updatePayload.vehicleType = formData.vehicleType;
+      } else {
+        updatePayload.clearVehicle = true;
+      }
+
+      const updateResult = await userService.updateProfile(userData.id, updatePayload);
 
       const updatedUser = await userService.getUserById(userData.id);
       const parsedCarInfo = parseCarInfo(updatedUser.carInfo || '');
       setUserData(updatedUser);
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         photo: updatedUser.photo || '',
         phone: updatedUser.phone || '',
+        vehicleType: updatedUser.vehicleType || parseVehicleTypeFromCarInfo(updatedUser.carInfo) || 'car',
         carBrand: parsedCarInfo.carBrand,
         carModel: parsedCarInfo.carModel,
         carPlate: parsedCarInfo.carPlate,
         carColor: parsedCarInfo.carColor,
-        carSeats: updatedUser.carSeats ? String(updatedUser.carSeats) : ''
-      });
+        carSeats: updatedUser.carSeats ? String(updatedUser.carSeats) : '',
+      }));
       setSelectedPhotoFileName('');
       setIsEditing(false);
       if (updateResult.photoSkipped) {
@@ -301,6 +430,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
   };
 
   const getUserPhoto = () => {
+    if (isEditing && formData.photo) {
+      return formData.photo;
+    }
     if (userData?.photo) return userData.photo;
     const initials = userData 
       ? `${userData.firstName?.[0] || ''}${userData.lastName?.[0] || ''}`.toUpperCase()
@@ -329,6 +461,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
               alt="Foto do usuário"
               className="w-24 h-24 rounded-full object-cover border-4 border-blue-500 mb-4"
             />
+            {isEditing && formData.photo && formData.photo !== (userData?.photo || '') && (
+              <p className="text-xs text-blue-600 mb-2">Prévia — como ficará no perfil</p>
+            )}
             <h2 className="text-2xl font-bold text-gray-900">
               {userData.firstName} {userData.lastName}
             </h2>
@@ -401,11 +536,43 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
             )}
 
             <div className="bg-gray-50 rounded-lg p-4 flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-1">Endereço</p>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <input type="text" value={formData.cep} onChange={(e) => handleInputChange('cep', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="CEP" />
+                    <input type="text" value={formData.rua} onChange={(e) => handleInputChange('rua', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Rua" />
+                    <input type="text" value={formData.numero} onChange={(e) => handleInputChange('numero', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Número" />
+                    <input type="text" value={formData.bairro} onChange={(e) => handleInputChange('bairro', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Bairro" />
+                    <input type="text" value={formData.cidade} onChange={(e) => handleInputChange('cidade', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Cidade" />
+                    <input type="text" value={formData.estado} onChange={(e) => handleInputChange('estado', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Estado" />
+                    <input type="text" value={formData.complemento} onChange={(e) => handleInputChange('complemento', e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Complemento (opcional)" />
+                  </div>
+                ) : (
+                  <p className="text-base text-gray-900 font-medium">
+                    {[formData.rua, formData.numero, formData.bairro, formData.cidade, formData.estado]
+                      .filter(Boolean)
+                      .join(', ') || 'Não informado'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 flex items-start gap-3">
               <Car className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Veiculo</p>
                 {isEditing ? (
                   <div className="space-y-2">
+                    <select
+                      value={formData.vehicleType}
+                      onChange={(e) => handleInputChange('vehicleType', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="car">Carro</option>
+                      <option value="motorcycle">Moto</option>
+                    </select>
                     <input
                       type="text"
                       value={formData.carBrand}
@@ -436,13 +603,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
                     />
                     <input
                       type="number"
-                      min={2}
-                      max={8}
+                      min={formData.vehicleType === 'motorcycle' ? 1 : 2}
+                      max={formData.vehicleType === 'motorcycle' ? 2 : 8}
                       value={formData.carSeats}
                       onChange={(e) => handleInputChange('carSeats', e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      placeholder="Quantidade de lugares no carro (2 a 8)"
+                      placeholder={
+                        formData.vehicleType === 'motorcycle'
+                          ? 'Total de lugares na moto (1 a 2)'
+                          : 'Total de lugares no carro (2 a 8)'
+                      }
                     />
+                    <p className="text-xs text-gray-500">
+                      Informe a quantidade total de lugares, incluindo o assento do motorista.
+                    </p>
+                    <p className="text-xs text-gray-500">Deixe em branco se não quiser cadastrar veículo.</p>
                   </div>
                 ) : (
                   (() => {
@@ -454,11 +629,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
 
                     return (
                       <div className="text-base text-gray-900 font-medium space-y-1">
+                        <p>Tipo: {vehicleTypeLabel(userData.vehicleType || parseVehicleTypeFromCarInfo(userData.carInfo))}</p>
                         <p>Marca: {parsedCarInfo.carBrand || '-'}</p>
                         <p>Modelo: {parsedCarInfo.carModel || '-'}</p>
                         <p>Placa: {parsedCarInfo.carPlate || '-'}</p>
                         <p>Cor: {parsedCarInfo.carColor || '-'}</p>
-                        <p>Assentos: {userData.carSeats || '-'}</p>
+                        <p>Assentos (total, incl. motorista): {userData.carSeats || '-'}</p>
                       </div>
                     );
                   })()
@@ -515,7 +691,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onTabChange, onLogout 
         confirmText="Sim, Sair"
         cancelText="Cancelar"
       />
+
+      <PhotoCropModal
+        open={cropModalOpen}
+        imageSrc={cropImageSrc}
+        onCancel={() => {
+          setCropModalOpen(false);
+          setCropImageSrc('');
+        }}
+        onConfirm={(croppedDataUrl) => {
+          if (croppedDataUrl.length > MAX_PHOTO_DATA_URL_LENGTH) {
+            showError('Imagem muito grande para salvar no perfil. Escolha uma imagem menor ou reduza o zoom.');
+            return;
+          }
+          setFormData((prev) => ({ ...prev, photo: croppedDataUrl }));
+          setCropModalOpen(false);
+          setCropImageSrc('');
+          showSuccess('Foto ajustada. Salve o perfil para aplicar.');
+        }}
+      />
     </div>
   );
 };
+
 

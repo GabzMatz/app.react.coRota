@@ -116,6 +116,31 @@ class AddressService {
       throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
     }
   }
+
+  async updateAddress(
+    addressId: string,
+    addressData: AddressCreateRequest
+  ): Promise<AddressResponse> {
+    try {
+      const response = await fetch(`${this.baseURL}/address/${addressId}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(addressData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+    }
+  }
 }
 
 export const addressService = new AddressService();
